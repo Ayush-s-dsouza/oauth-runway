@@ -1,0 +1,950 @@
+{
+ "app": {
+  "name": "X (formerly Twitter) API v2 developer app (OAuth 2.0 user context)",
+  "website": null,
+  "developer_portal_url": "https://console.x.com",
+  "oauth_docs_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+  "category": "Developer tools / social API"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "Composio has no managed OAuth app for X, so you must create your own X developer app and paste its Client ID and Secret into Composio. No formal app review was found in the research, but pay-per-use credits and the Developer Agreement's restriction on managed-service use are the real constraints.",
+  "hands_on_effort": "45-90 min",
+  "time_to_first_connection": "About 1 hour once you have a console login and loaded credits (estimate, not sourced)",
+  "approval_wait": "None found in the research (unverified; confirm in the console before public launch)"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Developer app, your own account only",
+   "unlocks": "Create the X app in the Developer Console and connect your own X account through Composio.",
+   "limits": [
+    "Callback URL list capped at 10 per app",
+    "Access tokens from the OAuth 2.0 flow last about 2 hours unless refreshed (community-reported)",
+    "Credentials are shown once at creation"
+   ],
+   "time_to_reach": "Minutes to about 1 hour",
+   "requires_review": false,
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f6",
+    "f9",
+    "f11",
+    "f20",
+    "f28",
+    "f29"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Credit-funded access (no invited-user tier found)",
+   "unlocks": "Make paid API calls from connected accounts, including accounts of invited testers, once pay-per-use credits are loaded. The research found no test-user allowlist or invited-user mode for OAuth 2.0 apps.",
+   "limits": [
+    "Pay-per-use billing with credits bought in the Developer Console; no monthly fee",
+    "A zero credit balance blocks requests",
+    "Per-user rate limits; HTTP 429 with error code 88 when exceeded",
+    "Legacy Basic and Pro tiers are closed to new developers (community-reported)",
+    "Free access is case-by-case for approved public-utility apps only",
+    "Team member invites are Enterprise-only"
+   ],
+   "time_to_reach": "Same session as Gate 1, plus the time to buy credits",
+   "requires_review": false,
+   "evidence_ids": [
+    "f24",
+    "f25",
+    "f26",
+    "f27",
+    "f30",
+    "f32",
+    "f33",
+    "f34"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public use by any X user (no review confirmed)",
+   "unlocks": "Let any X account authorize your app and make calls under the Developer Agreement.",
+   "limits": [
+    "No official X page confirmed an app review, privacy policy, domain verification, logo, or demo video requirement for standard OAuth 2.0 apps",
+    "Developer Agreement reportedly bars offering API access on a service-bureau, rental, or managed-services basis; one shared app serving many customers may breach it",
+    "Suspended apps get an email notice; appeals go through the X Platform Help Form"
+   ],
+   "time_to_reach": "Not established by the research; no review step was confirmed",
+   "requires_review": false,
+   "evidence_ids": [
+    "f14",
+    "f28",
+    "f29",
+    "f31"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Sign in and accept the Developer Agreement",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in to the X Developer Console at console.x.com with your X account. Accept the Developer Agreement and Policy and give the basic use-case information requested. The old developer.x.com portal redirects to a login page, so use console.x.com.",
+   "url": "https://console.x.com",
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Sign-in is required before the console loads.",
+    "Older tutorials reference developer.x.com URLs that are superseded."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f5"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create the app inside a project",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Click New App in the Developer Console. Enter an app name, description, and use case. The console attaches the app to a project, and a default project is created for you if none exists.",
+   "url": null,
+   "values": [
+    {
+     "label": "Console action",
+     "value": "New App"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Use a name that describes your agent or product, because it is what users see on the consent screen. Consent-screen branding rules were not verified."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set up OAuth 2.0 user authentication",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the app's User authentication settings and set up OAuth 2.0. Set App permissions to Read, or Read and write if your agent posts or modifies data. For the app type, choose Web App or Automated App/Bot, which are confidential clients that receive a client secret. Composio stores the secret, so a confidential type is the simpler fit. Native App and Single Page App are PKCE-only and do not issue a client secret.",
+   "url": null,
+   "values": [
+    {
+     "label": "OAuth version",
+     "value": "OAuth 2.0"
+    },
+    {
+     "label": "App permissions",
+     "value": "Read, or Read and write"
+    },
+    {
+     "label": "App type",
+     "value": "Web App or Automated App/Bot (confidential)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "X recommends OAuth 2.0 for new projects, and user-context v2 endpoints require it.",
+    "The Bearer Token is app-only and is not used for the authorization code flow."
+   ],
+   "evidence_ids": [
+    "f7",
+    "f8",
+    "f10",
+    "f37"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Register the Composio callback URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the same User authentication settings, add the callback URL to the Callback URI / Redirect URL list. It must match exactly, including any trailing slash. Use https. Do not use localhost for local tests, use 127.0.0.1 instead. Do not add javascript, data, file, or mailto URLs.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "A callback that is not registered returns error 415, 'Callback URL not approved for this client application.'",
+    "Maximum 10 callback URLs per app."
+   ],
+   "evidence_ids": [
+    "f3",
+    "f11",
+    "f12",
+    "f13",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save and copy the Client ID and Client Secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Save the settings and generate the credentials. Copy the Client ID and Client Secret into a password manager right away. The secret is displayed only once. If you lose it, you must regenerate it, which invalidates the old one, so update Composio afterwards.",
+   "url": null,
+   "values": [
+    {
+     "label": "Copy",
+     "value": "Client ID and Client Secret (OAuth 2.0 section, not the Bearer Token)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Regenerating credentials breaks any connection that still uses the old secret."
+   ],
+   "evidence_ids": [
+    "f8",
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create the Twitter auth config in Composio with your own app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create a Twitter (toolkit slug: twitter) auth config that uses your own OAuth 2.0 credentials. Paste the Client ID and Client Secret. Composio's authorize URL is x.com/i/oauth2/authorize and its token URL is api.x.com/2/oauth2/token. X's OIDC discovery document is not published, so these endpoints are configured manually.",
+   "url": null,
+   "values": [
+    {
+     "label": "Client ID",
+     "value": "From the X app (step 5)"
+    },
+    {
+     "label": "Client Secret",
+     "value": "From the X app (step 5)"
+    },
+    {
+     "label": "Authorize URL",
+     "value": "x.com/i/oauth2/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "api.x.com/2/oauth2/token"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "Composio does not offer managed OAuth for Twitter, so you cannot skip the X app.",
+    "Composio's default scope list is broad. Narrow it in the next step."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f22"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Narrow the scope list to what the agent needs",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Compare Composio's default 21 scopes with the actions your agent actually performs. Remove any you do not need, and keep offline.access if you want a refresh token so the connection survives beyond about 2 hours. Scopes are space-delimited on the authorization request. The agent can draft the scope list and a one-line justification per scope for your records.",
+   "url": null,
+   "values": [
+    {
+     "label": "Required for refresh",
+     "value": "offline.access"
+    },
+    {
+     "label": "Common minimum",
+     "value": "tweet.read, users.read (add tweet.write, dm.read, dm.write, etc. only if used)"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Scopes requested must match what the app is registered for, so keep the list consistent between Composio and the X app."
+   ],
+   "evidence_ids": [
+    "f15",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "From Composio, connect your own X account using the new auth config. The authorize endpoint shows a login page even for a wrong client ID, so a bad setup only shows up after sign-in. If the callback fails with error 415, the registered callback does not match Composio's URL exactly. The authorization code expires 30 seconds after issue, so the token exchange must happen right away.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Error 415 means the callback URL does not match.",
+    "Authorization codes expire in 30 seconds."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f17",
+    "f23"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Load pay-per-use credits",
+   "owner": "you",
+   "gate": 2,
+   "detail": "In the Developer Console billing area, buy credits. Billing is pay-per-usage with no monthly fee. Check the current per-request prices in the console, because community figures conflict. A zero balance blocks API calls.",
+   "url": null,
+   "values": [
+    {
+     "label": "Billing",
+     "value": "Pay-per-use credits in the Developer Console"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "The minimum credit purchase reported by the community is $5, but it was not verified on an official page.",
+    "Legacy Basic and Pro tiers are not available to new developers."
+   ],
+   "evidence_ids": [
+    "f24",
+    "f25",
+    "f26",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Handle rate limits and token refresh in the agent",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Build retry with backoff for HTTP 429 (error code 88). Rate limits are per-user for OAuth user tokens and reset mostly every 15 minutes, per endpoint. For tokens, the access token lasts about 2 hours. Refresh by POSTing to api.x.com/2/oauth2/token with grant_type=refresh_token and client_id. Refresh tokens are single-use, so store the new refresh token from every response.",
+   "url": null,
+   "values": [
+    {
+     "label": "Refresh endpoint",
+     "value": "POST api.x.com/2/oauth2/token"
+    },
+    {
+     "label": "Refresh grant",
+     "value": "grant_type=refresh_token, client_id"
+    }
+   ],
+   "est_time": "1-2 hours",
+   "gotchas": [
+    "If you keep an old refresh token after a refresh, the connection breaks.",
+    "Refresh-token lifetime was not confirmed in official docs. Community reports say the stated 6 months is not always honored, so plan for re-authorization."
+   ],
+   "evidence_ids": [
+    "f18",
+    "f20",
+    "f21",
+    "f32",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Check for a review prompt before any public launch",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Before letting users outside your team connect, check the console for any review or verification prompt. The research found none for standard OAuth 2.0 apps, but this is unverified. Read the Developer Agreement's service-bureau and managed-services terms. If your product connects many customers' X accounts through one shared app, get legal review before launch.",
+   "url": null,
+   "values": [],
+   "est_time": "20 min",
+   "gotchas": [
+    "A reported violation of the service-bureau restriction can lead to suspension.",
+    "A suspended app receives an email notice. Appeals go through the X Platform Help Form."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f28",
+    "f29",
+    "f31"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Developer Agreement and Policy accepted",
+   "gate": 1,
+   "detail": "Required to create a developer account in the console.",
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Callback URL registered exactly",
+   "gate": 1,
+   "detail": "Must match exactly, including trailing slashes. Max 10 per app. Use https in production and 127.0.0.1 (not localhost) locally. Disallowed schemes include javascript, data, file, mailto.",
+   "evidence_ids": [
+    "f11",
+    "f12",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Client Secret stored at creation",
+   "gate": 1,
+   "detail": "Credentials are displayed once. Regenerating invalidates the old ones.",
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "App type matches client type",
+   "gate": 1,
+   "detail": "Web App or Automated App/Bot receive a client secret. Native App or Single Page App use PKCE only.",
+   "evidence_ids": [
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "offline.access scope for refresh tokens",
+   "gate": 1,
+   "detail": "Including offline.access issues a refresh token. Without it, access expires after about 2 hours.",
+   "evidence_ids": [
+    "f16",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Authorization code exchanged within 30 seconds",
+   "gate": 1,
+   "detail": "The code expires 30 seconds after issue. The redirect_uri in the exchange must match the registered callback.",
+   "evidence_ids": [
+    "f17",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Pay-per-use credits available",
+   "gate": 2,
+   "detail": "Calls require a credit balance. Zero balance blocks requests. Check the console for current rates.",
+   "evidence_ids": [
+    "f24",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Rate-limit handling",
+   "gate": 2,
+   "detail": "Per-user limits for OAuth user tokens, mostly 15-minute windows, per endpoint. Exceeding returns HTTP 429 with code 88.",
+   "evidence_ids": [
+    "f32",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Team invitations need Enterprise",
+   "gate": 2,
+   "detail": "Inviting members with admin or developer roles is available only on Enterprise accounts.",
+   "evidence_ids": [
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "No free tier for standard developers",
+   "gate": 2,
+   "detail": "Free access is reserved for approved public-utility apps, granted case by case.",
+   "evidence_ids": [
+    "f30"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "offline.access",
+   "tier": "unknown",
+   "effect": "Issues a refresh token. Without it, the connection expires after about 2 hours. Tier not stated in findings.",
+   "evidence_ids": [
+    "f15",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "tweet.read",
+   "tier": "unknown",
+   "effect": "Read posts. Listed in the authorization code docs. Tier not stated in findings.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "tweet.write",
+   "tier": "unknown",
+   "effect": "Create and modify posts. Only request it if the agent posts.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "users.read",
+   "tier": "unknown",
+   "effect": "Read basic user profile data.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "dm.read / dm.write",
+   "tier": "unknown",
+   "effect": "Read and send direct messages. Request only if needed. Tier not stated in findings.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "follows.read / follows.write, like.read / like.write",
+   "tier": "unknown",
+   "effect": "Read and change follows and likes. Request only if used.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "tweet.moderate.write, block.*, mute.*, list.*, bookmark.*, media.write, space.read",
+   "tier": "unknown",
+   "effect": "Part of Composio's default list, not in the authorization code doc list. Remove unless the agent uses them.",
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "unsupported"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Error 415: 'Callback URL not approved for this client application.'",
+   "cause": "The redirect URI sent by Composio does not exactly match a callback registered in the X app.",
+   "fix": "Copy the Composio callback URL from the Composio callout on this page into the X app's callback list exactly, then retry the connection.",
+   "contact": null,
+   "evidence_ids": [
+    "f13",
+    "f11",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "API calls fail or are blocked after connecting",
+   "cause": "The pay-per-use credit balance is zero.",
+   "fix": "Buy credits in the Developer Console billing area, then retry.",
+   "contact": null,
+   "evidence_ids": [
+    "f27",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Connection breaks after a refresh",
+   "cause": "Refresh tokens are single-use. An old refresh token was reused after a new one was issued.",
+   "fix": "Store the refresh token returned by every refresh response and discard the previous one.",
+   "contact": null,
+   "evidence_ids": [
+    "f21"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Client Secret lost",
+   "cause": "Credentials are only displayed once at creation.",
+   "fix": "Regenerate the credentials in the app settings. This invalidates the old secret, so update the auth config in Composio.",
+   "contact": null,
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "App suspended or at risk of suspension",
+   "cause": "Reported restriction in the Developer Agreement on service-bureau, rental, or managed-services use of X API access. One shared app serving many customers' accounts may breach this.",
+   "fix": "Get legal review of the architecture before launch. X appeals go through the X Platform Help Form.",
+   "contact": null,
+   "evidence_ids": [
+    "f31",
+    "f14"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "twitter",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "dm.write",
+   "dm.read",
+   "mute.read",
+   "mute.write",
+   "space.read",
+   "tweet.write",
+   "tweet.read",
+   "tweet.moderate.write",
+   "users.read",
+   "follows.read",
+   "follows.write",
+   "like.read",
+   "like.write",
+   "list.read",
+   "list.write",
+   "block.read",
+   "block.write",
+   "bookmark.read",
+   "bookmark.write",
+   "media.write",
+   "offline.access"
+  ],
+  "note": "Composio has no managed OAuth for Twitter, so you must create your own X app and supply its Client ID and Secret. Composio's default redirect URI is its own backend callback, which must be added to the X app's callback list (see the Composio callout on this page for the exact URL). Composio's default scope list has 21 scopes, including dm.* and offline.access, so narrow it to what you use."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio's toolkit catalog has no managed OAuth scheme for Twitter, so a developer must bring their own X OAuth 2.0 app.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/twitter",
+   "quote": "\"managed_oauth_available\": false",
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f2",
+   "claim": "Composio's Twitter OAuth2 config lists authorization URL x.com/i/oauth2/authorize and token URL api.x.com/2/oauth2/token.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/twitter",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f3",
+   "claim": "Composio's default redirect URI for Twitter is its own backend callback, which must be registered in the X app.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/twitter",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f4",
+   "claim": "Developer accounts are created at the X Developer Console (console.x.com) by signing in with an X account and accepting the Developer Agreement and Policy.",
+   "source_url": "https://docs.x.com/x-api/getting-started/getting-access",
+   "quote": "Review and accept the Developer Agreement and Policy.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "The X developer portal is now the Developer Console at console.x.com; the old developer.x.com URL redirects to an X login page.",
+   "source_url": "https://developer.x.com/en/portal/dashboard",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "An OAuth 2.0 app is created by clicking New App in the Developer Console and entering a name, description, and use case, after which credentials are generated.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "X recommends OAuth 2.0 for new projects because it offers fine-grained scopes and is required for X API v2 user-context endpoints.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The Client ID and Client Secret are used for the OAuth 2.0 authorization code flow; the Bearer Token is separate and app-only.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Credentials are shown only once at creation; losing them requires regeneration, which invalidates the old ones.",
+   "source_url": "https://docs.x.com/x-api/getting-started/getting-access",
+   "quote": "Credentials are only displayed once.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "OAuth 2.0 app types are Web App and Automated App/Bot (confidential, receive a client secret), and Native App and Single Page App (public, use PKCE only).",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Callback URLs must be added to the app's allowlist, must match exactly including trailing slashes, are capped at 10 per app, should use https in production, and must use 127.0.0.1 rather than localhost for local development.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Certain URL schemes (such as javascript, data, file, mailto) are disallowed as callback URLs.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "A callback URL that is not registered produces error code 415 'Callback URL not approved for this client application.'",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "If an app is suspended, X emails a notice; appeals go through the X Platform Help Form.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Scopes are declared on the OAuth 2.0 authorize request; the list includes tweet.read, tweet.write, users.read, follows.read/write, like.read/write, dm.read/dm.write, and offline.access, and must be space-delimited.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "offline.access | Stay connected to your account until you revoke access.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Including offline.access in the scope causes a refresh token to be issued.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "If the scope offline.access is applied an OAuth 2.0 refresh token will be issued.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "The authorization code expires 30 seconds after it is issued and must be exchanged for an access token within that window.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Refresh-token exchange is a POST to api.x.com/2/oauth2/token with grant_type=refresh_token and client_id.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "The redirect_uri in the token exchange must exactly match a callback URL registered in the app settings.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Access tokens from the PKCE flow are valid for about 2 hours unless refreshed; refresh tokens are long-lived but sometimes expire earlier than the stated 6 months.",
+   "source_url": "https://devcommunity.x.com/t/refresh-token-expiring-with-offline-access-scope/168899?page=2",
+   "quote": "By default, the access token ... will only stay valid for two hours unless you've used the offline.access scope.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Refresh tokens are single-use: a successful refresh returns a new refresh token and the old one stops working.",
+   "source_url": "https://opentweet.io/how-to/fix-x-oauth-refresh-token-expired",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "X's OIDC discovery document is not published at x.com/.well-known/openid-configuration (HTTP 404), so endpoints must be configured manually.",
+   "source_url": "https://x.com/.well-known/openid-configuration",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "The x.com OAuth 2.0 authorize endpoint returned a login-prompt page for an invalid client_id rather than an OAuth error, so client validation is not visible before sign-in.",
+   "source_url": "https://x.com/i/oauth2/authorize",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Billing is pay-per-usage with credits bought in the Developer Console and no monthly fees.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-portal.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Legacy Basic and Pro subscription tiers are closed to new developers; community sources report pay-per-use became the default for new signups in February 2026.",
+   "source_url": "https://www.socialcrawl.dev/blog/x-twitter-api-2026",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Community reports cite per-request figures and a $5 minimum credit purchase, but these conflict across sources and should be verified in the console.",
+   "source_url": "https://www.outstand.so/blog/x-api-pricing",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Calls require a credit balance; a zero balance blocks requests under pay-per-use.",
+   "source_url": "https://api.sorsa.io/blog/twitter-api-pricing-2026",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Community guidance says standard use cases are approved automatically at signup, while AI and bot use cases trigger additional review; X's own docs do not confirm this.",
+   "source_url": "https://www.blotato.com/blog/twitter-api-pricing",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Community reporting says there is no separate app review for pay-per-use API apps; X's docs describe no formal app review either.",
+   "source_url": "https://www.outstand.so/blog/x-api-pricing",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Free access is reserved for approved public-utility apps, granted case by case; standard developers get no free tier.",
+   "source_url": "https://www.socialcrawl.dev/blog/x-twitter-api-2026",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "The Developer Agreement reportedly prohibits offering X API access on a service bureau, rental, or managed-services basis; violations may cause suspension.",
+   "source_url": "https://www.ayrshare.com/blog/x-api-compliance-byo-app/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Rate limits are per-user for OAuth user tokens and per-app for Bearer tokens, reset mostly every 15 minutes, and per-endpoint.",
+   "source_url": "https://docs.x.com/resources/fundamentals/rate-limits.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Rate-limited requests return HTTP 429 with error code 88.",
+   "source_url": "https://docs.x.com/resources/fundamentals/rate-limits.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Team management (inviting members with admin or developer roles) is available only on Enterprise accounts.",
+   "source_url": "https://docs.x.com/resources/fundamentals/developer-portal.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "Developers must attach each app to a project in the console; a default project is created for them.",
+   "source_url": "https://twitterapi.io/blog/x-developer-portal",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Setting up user authentication in the app settings: open User authentication settings, set up OAuth 2.0, choose App permissions (Read, Read and write), and pick the app type.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No official X page confirmed a formal app review, privacy policy, domain verification, logo, or demo video requirement for standard OAuth 2.0 apps. Verify in the console before public launch.",
+  "Current per-request pay-per-use prices were not confirmed. Community figures conflict (for example $0.01 vs $0.015 per post, $0.005 per read, 2M vs 3M read cap). Check the console.",
+  "The official pricing page (docs.x.com/x-api/getting-started/pricing) was linked but not fetched.",
+  "Whether AI or bot use cases need additional review is unconfirmed; only a community report exists.",
+  "No test-user allowlist or invited-user mode was found for OAuth 2.0 apps. Gate 2 is therefore described by credit funding, not a user-count cap.",
+  "Exact refresh-token lifetime was not confirmed by official docs. Community reports say the stated 6-month target is not always honored.",
+  "Whether a zero-credit account can complete the first own-account connection was not verified.",
+  "Composio's Twitter setup docs were not checked. Confirm the callback URL in Composio's current docs before registering it.",
+  "Consent-screen branding rules (what app name and icon users see) were not verified beyond a community statement."
+ ],
+ "slug": "twitter_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:04:52+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "3 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 45,
+  "probes_run": 4,
+  "research_seconds": 114,
+  "est_cost_usd": 0.0593,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0593
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 18,
+    "out": 21758,
+    "cache_read": 121856,
+    "cache_write": 62394,
+    "search": 4
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

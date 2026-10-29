@@ -1,0 +1,1074 @@
+{
+ "app": {
+  "name": "Zoom",
+  "website": "https://zoom.us",
+  "developer_portal_url": "https://marketplace.zoom.us/",
+  "oauth_docs_url": "https://developers.zoom.us/docs/integrations/create/",
+  "category": "Video conferencing / collaboration"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "You can create a Zoom General app and connect your own account in minutes, and users on your own Zoom account can use it as a private app without review. Any user outside your account needs a published (unlisted or public) app. That means a functional review plus a security review (OWASP-based testing and a least-privilege check on every scope), along with full listing metadata and a test plan.",
+  "hands_on_effort": "30-60 min to reach a working private app; 1-3 days to prepare listing materials, the test plan and scope justifications for review",
+  "time_to_first_connection": "15-30 min",
+  "approval_wait": "First response within 72 hours (SLA). Full review often takes 1-2 weeks, and some developers report 4+ weeks (community reports)."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Development / Local Test",
+   "unlocks": "You can authorize your own Zoom account against the app with development credentials. Use Local Test > Add App Now, or authorize through Composio.",
+   "limits": [
+    "Your Zoom account must belong to an account owner or admin, or to a user with the Zoom for developers role",
+    "Development credentials are for building and testing only",
+    "Loopback and other development redirect URLs are fine here but may be rejected later in review"
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f7",
+    "f9",
+    "f11",
+    "f32"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Private app (shared by authorization URL within your account); Beta app for limited external testers",
+   "unlocks": "Other users on your own Zoom account can add the app through a generated authorization URL. A Beta app can reach a limited set of external testers once Zoom approves it.",
+   "limits": [
+    "Private apps are limited to users on your own Zoom account and are never published",
+    "Beta apps cannot be published, have caps on external testers and on time, and need Zoom's approval before you share the authorization URL externally",
+    "Account admins may require pre-approval before users can add the app",
+    "Admin-level scopes can only be granted by an account admin or owner. Master-level scopes can only be granted by account owners."
+   ],
+   "time_to_reach": "Minutes for a private app. Beta sharing outside your account waits on Zoom's approval.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f22",
+    "f30",
+    "f31",
+    "f32",
+    "f43",
+    "f18"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Published app (Unlisted or Public on Zoom App Marketplace)",
+   "unlocks": "Users on any Zoom account can install the app: by direct link if it is unlisted, or by Marketplace search if it is public.",
+   "limits": [
+    "Unlisted apps go through the same review and still need full listing metadata",
+    "Even after review, installation may be restricted to specific users, domains or organizations",
+    "Customer accounts' admins can require pre-approval of apps",
+    "Zoom monitors published apps and may remove one that presents significant risk while it is fixed",
+    "Changes to scopes, features or data access go back through functional and security review"
+   ],
+   "time_to_reach": "72-hour first-response SLA. Security review can take up to 2 weeks, and some developers report 4+ weeks end to end.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f22",
+    "f23",
+    "f29",
+    "f34",
+    "f35",
+    "f36",
+    "f37",
+    "f39",
+    "f44",
+    "f45"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Confirm you have developer permissions on your Zoom account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "You must be the Zoom account owner, an account admin, or hold the Zoom for developers role. If you don't see the Developer link on marketplace.zoom.us, ask an admin to go to User Management > Roles > Role Settings > Advanced features and check View and Edit for Zoom for developers.",
+   "url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "values": [],
+   "est_time": "5 min (longer if you need an admin)",
+   "gotchas": [
+    "The Developer link is hidden until your permissions are correct",
+    "On some accounts the owner must also change app-install restrictions before an admin can enable an app"
+   ],
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4",
+    "f42"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a General app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in at marketplace.zoom.us and click Developer. Then go to Created apps > Develop > Build an app, select General app and click Create. The General app type replaces the legacy OAuth, Chatbot and Meeting SDK app types.",
+   "url": "https://marketplace.zoom.us/",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f53"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Choose admin-managed or user-managed",
+   "owner": "you",
+   "gate": 1,
+   "detail": "With admin-managed, account admins add the app and it can reach account-wide data, depending on scope. With user-managed, individual users add it and it sees only their own authorized data. For a per-user agent connection through Composio, user-managed usually fits.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "This choice limits which scopes and features are available. You can change it later, but you will have to reconfigure."
+   ],
+   "evidence_ids": [
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set the OAuth redirect URL and allow list",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the OAuth Information section, paste the Composio callback URL as the OAuth redirect URL. Add the same URL to the OAuth allow list. Strict mode and subdomain check are optional. Strict mode compares the URL character by character.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    },
+    {
+     "label": "OAuth allow list",
+     "value": "Same Composio callback URL"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "The token exchange must send exactly the redirect_uri registered on the app",
+    "Loopback or development redirect URLs may be rejected during publishing review if they appear in production"
+   ],
+   "evidence_ids": [
+    "f10",
+    "f11",
+    "f12",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Add scopes with a Scope Description for each",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "On the Scopes step, add only the granular scopes your agent actually uses. Start from Composio's default list and remove anything you don't need. An agent can draft a one-line Scope Description for each scope explaining why the app needs it. Mark scopes as required or optional where that makes sense.",
+   "url": null,
+   "values": [],
+   "est_time": "15-30 min",
+   "gotchas": [
+    "Zoom's Security Review team can reject any scope it considers unnecessary",
+    "Redundant pairs, such as a view-only scope next to a broader manage scope, get flagged",
+    "Avoid admin-level (:admin) and master-level (:master) scopes unless you really need them"
+   ],
+   "evidence_ids": [
+    "f15",
+    "f16",
+    "f17",
+    "f20",
+    "f21",
+    "f50"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy the development credentials into a Composio custom auth config",
+   "owner": "you",
+   "gate": 1,
+   "detail": "The build flow generates separate development and production Client ID/Client Secret pairs. Paste the development pair into a Composio Zoom auth config that uses your own OAuth app, with the same scopes you added in Zoom.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Development and production credentials are different. Switch to the production pair when you publish."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Use Local Test > Add App Now, or start a Composio connection, to authorize your own Zoom account. Then call one API action to confirm the token works. An 'Invalid client_id' error (errorCode 4702) on the Zoom sign-in page means the client ID is wrong.",
+   "url": "https://zoom.us/oauth/authorize",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f32",
+    "f51",
+    "f14"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Share as a private app with users on your account",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Generate an authorization URL from the build flow and send it to users on your own Zoom account. No review is needed. If your account requires app pre-approval, an admin must approve the app for those users or groups.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Users outside your Zoom account can't use a private app. Reaching them needs a Beta app, which Zoom must approve, or a published app."
+   ],
+   "evidence_ids": [
+    "f30",
+    "f32",
+    "f43",
+    "f44",
+    "f31"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Meet the sanctions-compliance requirement (free accounts only)",
+   "owner": "you",
+   "gate": 3,
+   "detail": "If you develop on a free Zoom account, either upgrade to Free with Credit Card or submit your developer and entity information through Zoom's form before you publish.",
+   "url": null,
+   "values": [],
+   "est_time": "10-20 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare listing metadata and hosted policy pages",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Host the privacy policy, terms, support page and user documentation on a domain your company owns. Provide a short description (150 characters max), a long description, 2-3 images at 1200x780 px and an optional video (40 MB max). The support page must list support hours, a first-response SLA and support channels. The user documentation must cover adding, using and removing the app. An agent can draft all of this text.",
+   "url": null,
+   "values": [],
+   "est_time": "0.5-1 day",
+   "gotchas": [
+    "Documents hosted on Google Drive or Dropbox are rejected",
+    "Unlisted apps fail review if any metadata is missing"
+   ],
+   "evidence_ids": [
+    "f26",
+    "f27",
+    "f28",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Write the test plan and scope justifications",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Draft a test plan that gives a justification and detailed testing steps for every scope, plus test credentials for at least one account if the integration needs a user account. Link the test plan in the Release Notes section of the App Submission build flow.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [
+    "Zoom denies any scope that lacks a justification and testing instructions, and asks you to remove it",
+    "Every submission needs a test plan, including resubmissions"
+   ],
+   "evidence_ids": [
+    "f24",
+    "f21",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit for review using production credentials",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Choose Unlisted (direct-link install) or Public (searchable), then submit. A new app must be submitted with its production Client ID. Update Composio to the production Client ID/Secret and register the Composio callback URL for production as well.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Updates to an already-published app are submitted with the development Client ID, so reviewers can test the changed scopes"
+   ],
+   "evidence_ids": [
+    "f25",
+    "f22",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for functional and security review, then fix any findings",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Reviews run Monday to Friday, first come, first served. They check submission completeness and branding, then functionality and compliance (including a technical design review), then security (OWASP-based testing, a least-privilege check on scopes, vulnerable libraries). If the app fails, Zoom sends a report of action items, and you resubmit once they're fixed.",
+   "url": null,
+   "values": [],
+   "est_time": "72-hour first response; 1-4+ weeks in total (reported)",
+   "gotchas": [],
+   "evidence_ids": [
+    "f23",
+    "f34",
+    "f35",
+    "f36",
+    "f40"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Re-submit when you change scopes or features",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Adding scopes or changing features or data access after publishing triggers another functional and security review. Submit with development credentials and a test plan entry for each new scope.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours plus review wait",
+   "gotchas": [],
+   "evidence_ids": [
+    "f37",
+    "f39"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Zoom account owner, admin, or Zoom for developers role",
+   "gate": 1,
+   "detail": "Required before you can create an app or see the Developer link.",
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Registered OAuth redirect URL and OAuth allow list",
+   "gate": 1,
+   "detail": "Both are required fields. The token exchange must use the same redirect_uri.",
+   "evidence_ids": [
+    "f10",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Scope Description for each scope",
+   "gate": 1,
+   "detail": "Every scope you add needs a written reason. Zoom's security team may reject unnecessary scopes.",
+   "evidence_ids": [
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Sanctions compliance for free accounts",
+   "gate": 3,
+   "detail": "Upgrade to Free with Credit Card, or submit developer and entity information through Zoom's form, before publishing.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Privacy policy, terms, support and documentation URLs on a company-owned domain",
+   "gate": 3,
+   "detail": "Third-party hosting such as Google Drive or Dropbox is not allowed.",
+   "evidence_ids": [
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Listing metadata",
+   "gate": 3,
+   "detail": "Short description (150 characters max), long description, 2-3 images at 1200x780 px, optional video (40 MB max), and user docs covering add, use and remove. Unlisted apps need this too.",
+   "evidence_ids": [
+    "f27",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Support page with hours, first-response SLA and channels",
+   "gate": 3,
+   "detail": "Required for published apps.",
+   "evidence_ids": [
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Test plan with per-scope justification and test credentials",
+   "gate": 3,
+   "detail": "Link it in Release Notes in the App Submission flow. Required on every submission and resubmission.",
+   "evidence_ids": [
+    "f24",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Production redirect URLs (not loopback/dev)",
+   "gate": 3,
+   "detail": "Development endpoints may be rejected in publishing review.",
+   "evidence_ids": [
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Production Client ID on a new-app submission",
+   "gate": 3,
+   "detail": "New apps are submitted with production credentials. Updates are submitted with development credentials.",
+   "evidence_ids": [
+    "f25"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "Granular user-level scopes (e.g. meeting:read:meeting, meeting:write:meeting, user:read:user)",
+   "tier": "unknown",
+   "effect": "Zoom publishes no sensitive or restricted tiers. Every scope goes through the least-privilege check in security review and needs its own justification and test steps.",
+   "evidence_ids": [
+    "f15",
+    "f19",
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "cloud_recording:* and archiving:* (recordings, transcripts, archived files; includes cloud_recording:delete:meeting_transcript)",
+   "tier": "unknown",
+   "effect": "These are in Composio's defaults. Drop them unless your agent needs them, especially the delete scope, because the review asks you to remove unused or inappropriate scopes. Zoom does not document whether they get extra scrutiny.",
+   "evidence_ids": [
+    "f20",
+    "f21",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Admin-level scopes (:admin suffix)",
+   "tier": "unknown",
+   "effect": "Only an account admin or owner can grant these. Zoom advises avoiding them unless strictly necessary, which can reduce review friction.",
+   "evidence_ids": [
+    "f18",
+    "f50"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Master-level scopes (:master suffix)",
+   "tier": "unknown",
+   "effect": "These can only be granted to an account-level app by account owners. Most agent use cases don't need them.",
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Optional scopes / include_granted_scopes",
+   "tier": "basic",
+   "effect": "Marking scopes as optional and requesting more scopes incrementally keeps the initial consent small. Zoom encourages this to improve adoption.",
+   "evidence_ids": [
+    "f17",
+    "f49"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "No Developer link on marketplace.zoom.us",
+   "cause": "Your user lacks the owner, admin or Zoom for developers role.",
+   "fix": "Ask an admin to enable View and Edit for Zoom for developers under User Management > Roles > Role Settings > Advanced features.",
+   "contact": null,
+   "evidence_ids": [
+    "f3",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Review asks you to remove scopes, or denies a scope",
+   "cause": "The scope is unnecessary or redundant, or lacks a justification and testing instructions in the test plan.",
+   "fix": "Request only the scopes you use, drop redundant view/manage pairs, and document each scope in the test plan.",
+   "contact": null,
+   "evidence_ids": [
+    "f16",
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Submission rejected because of redirect URLs",
+   "cause": "Loopback or development endpoints were registered as production redirects.",
+   "fix": "Use the production Composio callback URL in the production OAuth settings.",
+   "contact": null,
+   "evidence_ids": [
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Submission rejected for listing or document issues",
+   "cause": "Policy or support docs are hosted on Google Drive or Dropbox, or metadata is missing (this applies to unlisted apps too).",
+   "fix": "Host every document on your own domain and complete all listing fields and images.",
+   "contact": null,
+   "evidence_ids": [
+    "f26",
+    "f27",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Submission rejected for the wrong client ID",
+   "cause": "A new app was submitted with development credentials, or an update was submitted with production credentials.",
+   "fix": "Use the production Client ID for a new app and the development Client ID for updates.",
+   "contact": null,
+   "evidence_ids": [
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Can't publish from a free account",
+   "cause": "U.S. sanctions-compliance requirement.",
+   "fix": "Upgrade to Free with Credit Card, or submit the developer/entity information form.",
+   "contact": null,
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Users on a customer account can't add the app",
+   "cause": "The account requires pre-approval of apps, or the admin's install privileges are restricted.",
+   "fix": "Users request installation and their admin approves the app for all users or for specific users or groups. The account owner may need to adjust install settings.",
+   "contact": null,
+   "evidence_ids": [
+    "f43",
+    "f44",
+    "f42"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Meeting SDK bot can't join meetings outside your account",
+   "cause": "Meeting SDK apps need App Review before they can join external meetings.",
+   "fix": "Submit the app for review.",
+   "contact": null,
+   "evidence_ids": [
+    "f41"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "zoom",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "contact:read:list_contacts",
+   "meeting:read:summary",
+   "meeting:read:list_registrants",
+   "meeting:read:list_past_participants",
+   "meeting:read:list_meetings",
+   "meeting:write:meeting",
+   "meeting:update:meeting",
+   "meeting:write:registrant",
+   "meeting:read:meeting",
+   "webinar:read:webinar",
+   "webinar:read:list_registrants",
+   "webinar:read:list_webinars",
+   "webinar:read:list_past_participants",
+   "webinar:read:participant",
+   "webinar:write:registrant",
+   "archiving:read:archived_files",
+   "archiving:read:list_archived_files",
+   "cloud_recording:delete:meeting_transcript",
+   "cloud_recording:read:meeting_transcript",
+   "cloud_recording:read:list_user_recordings",
+   "cloud_recording:read:list_recording_registrants",
+   "cloud_recording:read:list_recording_files",
+   "user:read:list_collaboration_devices",
+   "user:read:collaboration_device",
+   "user:read:settings",
+   "user:read:user"
+  ],
+  "note": "Composio's managed Zoom OAuth app (zoom.us/oauth/authorize and /token) is the fastest way to prototype. Register your own General app when you want your own branding on the consent screen, a smaller scope set, or a published Marketplace listing. Your own app works right away for your account and for users on your account as a private app. Reaching users outside your account requires Zoom's unlisted or public review. Composio's defaults are granular scopes, and the list includes recording, transcript-delete and archiving scopes. Trim it to what your agent uses before review, because Zoom rejects unnecessary scopes."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio lists managed OAuth2 for Zoom with authorization URL https://zoom.us/oauth/authorize and token URL https://zoom.us/oauth/token.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/zoom",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f10",
+   "claim": "Zoom's OAuth Information section requires an OAuth redirect URL, and an OAuth allow list of permitted redirect URLs (either full callback URLs or base domains); strict mode and subdomain check are optional.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": "OAuth allow lists (required): Add any unique URLs that Zoom should allow as valid redirects for your OAuth flows.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Zoom says it requires apps to use valid registered redirect URLs to prevent malicious redirection; loopback and other development endpoints are allowed for development but may be rejected during marketplace publishing review if used in production.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/basic-info/oauth-info/",
+   "quote": "avoid using them in production redirects.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Strict mode verifies the redirect URL character by character when enabled; the subdomain check restricts redirects to the same subdomain as registered URLs.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/basic-info/oauth-info/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Token exchange is a POST to https://zoom.us/oauth/token using the authorization code plus the same redirect_uri registered in the Marketplace app; the authorize URL is https://zoom.us/oauth/authorize with response_type=code, client_id and redirect_uri.",
+   "source_url": "https://godevelopers.zoom.us/docs/integrations/oauth/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Newly created apps use granular scopes (format service:action:data_claim with optional :admin or :master access), while older apps keep classic scopes and can migrate; granular scopes are only available in the new build flow.",
+   "source_url": "https://developers.zoom.us/docs/integrations/oauth-scopes-overview/",
+   "quote": "Newly created apps use granular scopes, including new apps created using the new build flow",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Zoom's Scopes step asks the developer to add scopes and write a Scope Description explaining why each is needed; adding a scope submits a request that the Zoom Security Review team can reject if it is unnecessary.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": "If the Zoom Security Review team determines the requested scope is not necessary for your app, they may reject the scope request.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Scopes can be marked required or optional in the build flow; a basic authorization query asks for the defaults, while an advanced query lets the app set required versus optional scopes per request, and include_granted_scopes adds scopes to earlier grants.",
+   "source_url": "https://developers.zoom.us/docs/integrations/oauth-scopes-overview/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Admin-level scopes can only be granted by an account admin or owner; Master-level scopes can only be granted to an account-level app by account owners.",
+   "source_url": "https://developers.zoom.us/docs/integrations/oauth-scopes-overview/",
+   "quote": "Master-level scopes can only be granted to an an account-level app by account owners.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Zoom's developer documentation does not publish a separate list of 'sensitive' or 'restricted' scope tiers that trigger extra verification; scope review is handled as part of the general functional and security review, which evaluates whether each scope is the minimum needed.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Zoom's developer docs say creating an OAuth app requires a Zoom account where the user is the account owner, an account admin, or has the Zoom for developers role.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": "You are either the Zoom account owner, account admin, or have been assigned the Zoom for developers role.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Scope review is folded into the Security Review: Zoom's Marketplace Security Review team verifies the app requests only the minimum necessary OAuth scopes and may ask developers to remove unused or inappropriate scopes.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": "Developers may be asked to remove unused or inappropriate scopes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Each scope must come with a justification and detailed testing instructions in the test plan; without them, Zoom denies the scope and requests its removal. Redundant scopes (e.g., a view-only scope alongside a broader manage scope) are flagged.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": "Without them, we deny the rest and request the removal of the scope.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Review distinguishes public and unlisted apps (dedicated review) from private and beta apps, which do not require review.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": "Private and beta apps do not require review.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Zoom's review has stages: submission completeness and branding, functionality/usability/compliance (including technical design review), and a security review covering OWASP-based testing, scope least-privilege verification, and vulnerable-library checks.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "A test plan is required for every submission, including re-submissions, and must be linked in the Release Notes section of the App Submission build flow; test credentials for at least one account should be provided when the integration needs a user account.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Production review submissions for new apps must use the production client ID; updates must use the development client ID so reviewers can test changed scopes.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "All app metadata and resource URLs (terms, support, privacy policy, documentation) must be hosted on fully qualified domains owned by the company; Google Drive or Dropbox hosting is not permitted.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": "Hosting these documents on third-party platforms like Google Drive or Dropbox is not permitted.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Required listing material includes a short description of at most 150 characters, a long description, 2-3 images at 1200x780 px, optional video up to 40 MB, and user documentation covering adding, using and removing the app.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Published apps need a support URL listing support hours, a first-response SLA, and support channels.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Unlisted apps still need full listing metadata (images, descriptions, categories) because it appears on the active app notification and added-apps page; missing metadata fails review. Unlisted apps are not searchable and are distributed by direct link.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "quote": "Unlisted apps still require app meta data",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "The Zoom for developers role is enabled by an admin under User Management > Roles > Role Settings > Advanced features, by checking View and Edit for Zoom for developers.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Private apps are not published and are shared by authorization URL only, limited to the developer's own Zoom account users; no review is needed.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "Beta apps cannot be published to the Marketplace, are limited in external testers and time, and require Zoom approval before sharing an authorization URL externally.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Before submitting, the developer must add the app to their own account via Local Test (Add App Now) and can share it with account users by generating an authorization URL.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Zoom's review timing guidance is that review time varies with app quality, usability, feature count and clarity of listing; well-defined scopes, a clear test plan, and clear listing content usually shorten it, and poorly described scopes can lengthen it.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Zoom's developer blog (older post) states a 72-hour first-response SLA with typical responses within 36 hours; reviews are handled Monday-Friday on a first-come first-serve basis.",
+   "source_url": "https://developers.zoom.us/blog/how-long-does-app-review-take/",
+   "quote": "We have a 72 hour first response SLA, and typically respond within 36 hours of your submission.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "A Zoom developer forum thread cites a 72-hour SLA for every submission and says the security review can take up to two weeks depending on technical design document accuracy; the thread is community-sourced and dated.",
+   "source_url": "https://devforum.zoom.us/t/zoom-app-marketplace-review-process/121554",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "Developers on the forum report full publishing taking four or more weeks, and a community contributor reports an app waiting four days for review; these are anecdotes, not official timelines.",
+   "source_url": "https://devforum.zoom.us/t/expediting-app-review/144937",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Updates that change scopes, features or data access need both functional and security review within the standard 72-hour response SLA, and must be submitted with a test plan for each new scope using development credentials.",
+   "source_url": "https://developers.zoom.us/docs/distribute/published-apps/updating/",
+   "quote": "Changes to scope, features, or data access need to go through both a functional and security review",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "Zoom says it monitors published apps for ongoing compliance and may remove an app from use while remediation is completed if it presents significant risk to users.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "The Marketplace only shows the Developer link to users who hold the proper developer permissions; otherwise the user should ask an admin to check their permissions.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f40",
+   "claim": "Failed reviews go through a remediation process: Zoom provides a report of reasons and action items, and the developer resubmits after completing open items.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f41",
+   "claim": "Apps that use the Meeting SDK must go through App Review before joining meetings outside their own account.",
+   "source_url": "https://developers.zoom.us/docs/distribute/sdk-feature-review-requirements/",
+   "quote": "Apps will need to go through our App Review process to join Meetings outside their own account.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f42",
+   "claim": "Zoom's developer docs state that the account must allow the Developer role's app-install privileges; a community thread reports admins with install restrictions being blocked from enabling an app until the account owner adjusts settings.",
+   "source_url": "https://devforum.zoom.us/t/required-permissions-to-enable-oauth-app/86574",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f43",
+   "claim": "Pre-approval gate: account owners/admins control whether users can add an app; for an app not pre-approved, users on the account can request installation and admins receive an email to approve or decline.",
+   "source_url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062300",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f44",
+   "claim": "Account owners and admins have an account-wide setting to require pre-approval of apps; they can approve an app for all users, or for specific users or user groups.",
+   "source_url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062300",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f45",
+   "claim": "Unlisted apps and public apps may be restricted in installation to specific users, domains, or organizations even after passing review.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-review-process/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f46",
+   "claim": "A 2016-era developer forum thread reported a limit on OAuth apps created within a 24-hour window, with a staff reply saying the cap applies per 24 hours and resets; this is old and may not reflect current policy.",
+   "source_url": "https://devforum.zoom.us/t/limit-on-number-of-oauth-apps/24107",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f48",
+   "claim": "Zoom's September 2026 API changelog entry added an IP-address feature letting app developers list the IP addresses their app uses to call Zoom APIs; the account admin adds these to an allowlist.",
+   "source_url": "https://developers.zoom.us/changelog/app-marketplace/september-21-2026/",
+   "quote": "Added IP address feature, enabling app developers to provide a list of IP addresses their app uses to access Zoom APIs.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f49",
+   "claim": "Zoom's developer docs say granular and optional scopes are the newer approach and encourage reducing permissions to the minimum needed to make users more likely to adopt the app.",
+   "source_url": "https://developers.zoom.us/docs/integrations/oauth-scopes-overview/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Free-account developers must either upgrade to Free with Credit Card or submit developer and entity information through a Zoom form to satisfy U.S. sanctions compliance before publishing.",
+   "source_url": "https://developers.zoom.us/docs/distribute/app-submission/common-rejection-issues/",
+   "quote": "Zoom allows free accounts to develop and publish apps.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f50",
+   "claim": "Zoom's own blog advises requesting only necessary scopes, preferring granular over classic scopes, and avoiding admin-level scopes unless strictly necessary, and says this can reduce review friction.",
+   "source_url": "https://developers.zoom.us/blog/principle-of-least-privilege-blog/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f51",
+   "claim": "Zoom's Zoom Marketplace probe shows the Zoom OAuth authorize endpoint is live: an invalid client_id returns a JSON error (errorCode 4702, 'Invalid client_id') on a sign-in page rather than an OAuth error redirect.",
+   "source_url": "https://zoom.us/oauth/authorize",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f53",
+   "claim": "Zoom's Developer Platform says the new build flow replaced separate legacy app types (OAuth, Chatbot, Meeting SDK) with one General app type, and the legacy granular role permissions were flagged for deprecation.",
+   "source_url": "https://developers.zoom.us/docs/build-flow/before-you-build/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "The marketplace.zoom.us portal is live (HTTP 200, no login wall on the public landing page); the developer flow begins by signing in there and clicking the Developer link.",
+   "source_url": "https://marketplace.zoom.us/",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "To create the app, the developer goes to Created apps, clicks Develop, chooses Build an app, selects General app and clicks Create.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The developer picks whether the app is admin-managed (account admins add it, can access account-wide data depending on scope) or user-managed (individual users add it and it sees only their own authorized data); this choice constrains available scopes and features and can be changed later with reconfiguration.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "The build flow auto-generates separate development and production client ID/secret credentials; development credentials are for building and testing, production credentials are used when publishing.",
+   "source_url": "https://developers.zoom.us/docs/integrations/create/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No current official install cap or user limit was found for unreviewed private or unlisted apps. The only source on limits is a 2016 forum post about a 24-hour cap on app creation.",
+  "Access-token expiry, refresh-token lifetime and rotation behaviour were not confirmed from Zoom docs.",
+  "Total review time is not officially stated. Zoom gives a 72-hour first-response SLA; community reports range from 2 weeks for security review to 4+ weeks end to end.",
+  "Not confirmed: whether recording, transcript, archiving or admin scopes trigger extra review beyond the standard least-privilege check.",
+  "Not verified: whether all of Composio's default granular scopes can be added to a user-managed General app built by a non-admin developer.",
+  "Not confirmed: whether customer admins will require you to declare Composio's outbound IP addresses through the IP-address feature added in September 2026 (f48).",
+  "The authorize probe used a fake client_id, so redirect validation for a real app was not tested.",
+  "No requirement for domain verification or a minimum number of installs was found for listing."
+ ],
+ "slug": "zoom_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T18:35:35+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "1 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 51,
+  "probes_run": 3,
+  "research_seconds": 169,
+  "est_cost_usd": 0.4018,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0665,
+   "claude-opus-5-5": 0.3353
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 10,
+    "out": 11270,
+    "cache_read": 125190,
+    "cache_write": 81699,
+    "search": 5
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 13156,
+    "cache_read": 0,
+    "cache_write": 14432,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

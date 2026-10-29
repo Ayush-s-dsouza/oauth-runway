@@ -1,0 +1,865 @@
+{
+ "app": {
+  "name": "bexio",
+  "website": "https://www.bexio.com",
+  "developer_portal_url": "https://developer.bexio.com",
+  "oauth_docs_url": "https://docs.bexio.com/",
+  "category": "Accounting / business software (Switzerland)"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "You need a bexio account. Then you log in to developer.bexio.com, accept the terms, create an app with a redirect URL and copy the client ID and secret. bexio says it does not restrict API access, and the findings show no review step for a plain OAuth app. Review only applies if you want a listing on the bexio marketplace, which is optional and requires existing customers and a revenue-share agreement.",
+  "hands_on_effort": "30-60 min (plus weeks to months of business work if you want a marketplace listing)",
+  "time_to_first_connection": "15-30 min after you have a bexio account",
+  "approval_wait": "none for OAuth use (marketplace listing: no timeline published)"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Developer portal app",
+   "unlocks": "You can connect your own bexio company through your own client ID and secret.",
+   "limits": [
+    "You need a bexio account (a trial works) and must accept the developer portal terms",
+    "Redirect URLs must be registered on the app and must match exactly",
+    "API calls use your own bexio user rights as well as the granted scopes",
+    "Per-company rate limit per minute. The number isn't published; read the RateLimit-* headers"
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f5",
+    "f6",
+    "f8",
+    "f18",
+    "f33"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Other bexio users (no separate test mode documented)",
+   "unlocks": "Any other bexio user or company can authorize the same app. No test-user allowlist or development mode was found.",
+   "limits": [
+    "No documented user cap or install cap for unlisted apps (not confirmed)",
+    "Each connection only has the bexio user rights of the person who authorized it",
+    "Refresh tokens require offline_access. The offline session closes after 1 year without renewal"
+   ],
+   "time_to_reach": "Same as Gate 1",
+   "requires_review": false,
+   "evidence_ids": [
+    "f4",
+    "f18",
+    "f19",
+    "f35"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public use (marketplace listing optional)",
+   "unlocks": "Anyone can connect without review, because bexio does not restrict API access. A listing on the bexio marketplace is a separate partner track that needs an application and a signed partner agreement.",
+   "limits": [
+    "Marketplace requirements: at least 10 bexio customers, at least 20 active users, bexio API and OpenID Connect login, app in 2 of 4 languages (DE/FR/IT/EN), listing content in all 4",
+    "Marketplace terms: 25% service fee on revenue from shared bexio users (20% for top-revenue partners), bexio collects payments, price parity, you support your own customers"
+   ],
+   "time_to_reach": "Immediate for public OAuth use. Marketplace: no timeline published",
+   "requires_review": false,
+   "evidence_ids": [
+    "f4",
+    "f23",
+    "f24",
+    "f25",
+    "f26",
+    "f27",
+    "f28",
+    "f29",
+    "f30"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Get a bexio account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign up for a bexio account (a trial works) at bexio.com. You will use these credentials to log in to the developer portal.",
+   "url": "https://www.bexio.com",
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [
+    "Third-party guides say you need an admin account to create apps. bexio's own docs don't say this."
+   ],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Log in to the bexio Developer Portal",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Go to https://developer.bexio.com and log in with your bexio credentials.",
+   "url": "https://developer.bexio.com",
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1",
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Accept the developer terms",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Read and accept the portal terms and conditions. Pay attention to the commercial use rules in Section 4.4 before you build a paid product.",
+   "url": null,
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [
+    "Section 4.4 covers commercial use. Check it if you plan to charge for your integration."
+   ],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create the app and set the redirect URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Create a new app in the portal. In the 'Allowed redirect URL' field, enter the exact callback URL shown in your Composio auth config. bexio requires redirect URLs when you register the app, and they must match exactly.",
+   "url": "https://developer.bexio.com",
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "The Composio catalog lists https://backend.composio.dev/api/v1/auth-apps/add as the default, but a probe used https://backend.composio.dev/api/v3/toolkits/auth/callback. Copy the URL from your auth config, and consider registering both. A third-party guide says an app can have up to 10 redirect URLs.",
+    "If the URL doesn't match exactly, sign-in stops with an error."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f39",
+    "f40"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Copy the Client ID and Client Secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open 'App Details' for the new app and reveal the Client ID and Client Secret. Store the secret on the server side only, because bexio requires it for the code exchange.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5",
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Choose a minimal scope list",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Trim Composio's default list of about 37 scopes down to what your agent actually uses. Scopes are separated by spaces, and a write scope also grants read on the same resource. Include openid and offline_access so you get a refresh token.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Scopes are fixed once the user consents. Adding scopes later means every user has to authorize again.",
+    "Payroll scopes give access to employee and paystub data. Leave them out unless you need them."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f15",
+    "f16",
+    "f17",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a Composio auth config with your credentials",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "In Composio, create a bexio auth config that uses your own OAuth app. Composio has no managed app for bexio. Enter the Client ID, Client Secret and your trimmed scopes. The endpoints are https://auth.bexio.com/realms/bexio/protocol/openid-connect/auth and .../token. The issuer is https://auth.bexio.com/realms/bexio.",
+   "url": null,
+   "values": [
+    {
+     "label": "Discovery URL",
+     "value": "https://auth.bexio.com/realms/bexio/.well-known/openid-configuration"
+    }
+   ],
+   "est_time": "5-10 min",
+   "gotchas": [
+    "Use the realm-specific discovery path. The generic auth.bexio.com/.well-known path returns 404.",
+    "The token endpoint only accepts parameters in the request body, not in the query string."
+   ],
+   "evidence_ids": [
+    "f38",
+    "f10",
+    "f11",
+    "f12",
+    "f21"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection from Composio, sign in to bexio, approve the consent screen and make a simple API call, for example listing contacts. If you see 'Client nicht gefunden', the client ID is wrong.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Calls can still fail if your bexio user doesn't have rights to that data, even when the scope is granted."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f18"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Roll out to other bexio users and handle rate limits",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Other bexio companies can connect through the same app without review. Read RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset from responses and back off on HTTP 429, because the numeric limit isn't published.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f4",
+    "f33",
+    "f34",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional) Apply for a bexio marketplace listing",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Only do this if you want to be listed on the bexio marketplace. You need at least 10 bexio customers and 20 active users, OpenID Connect login, the app in 2 of 4 languages and listing texts and visuals in all 4. Then submit the partner form and sign the partner agreement (25% revenue fee, bexio collects payments).",
+   "url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "values": [],
+   "est_time": "Several days of content work",
+   "gotchas": [],
+   "evidence_ids": [
+    "f23",
+    "f24",
+    "f25",
+    "f26",
+    "f27",
+    "f28",
+    "f29",
+    "f31"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional) Wait for the partnership process",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "After you submit the form, bexio runs a partnership process. No timeline or review criteria beyond the listed requirements are published.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f27",
+    "f32"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "bexio account",
+   "gate": 1,
+   "detail": "Needed to log in to developer.bexio.com. A trial account works.",
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Accept the developer portal terms (Section 4.4 commercial use)",
+   "gate": 1,
+   "detail": "You must accept them before you can create an app.",
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Registered redirect URL(s)",
+   "gate": 1,
+   "detail": "Must be set when you create the app and must match the callback exactly.",
+   "evidence_ids": [
+    "f6",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Server-side client secret handling",
+   "gate": 1,
+   "detail": "The authorization code flow requires the client secret at the token exchange. PKCE is not documented.",
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Marketplace: 10+ bexio customers and 20+ active users",
+   "gate": 3,
+   "detail": "Only needed for a marketplace listing, not for public OAuth use.",
+   "evidence_ids": [
+    "f23",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Marketplace: language coverage and support",
+   "gate": 3,
+   "detail": "App in 2 of DE/FR/IT/EN, listing content in all 4, and you support your own customers.",
+   "evidence_ids": [
+    "f26",
+    "f30",
+    "f31"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Marketplace: signed partner agreement",
+   "gate": 3,
+   "detail": "25% service fee (20% for top partners), bexio collects payments, price parity.",
+   "evidence_ids": [
+    "f27",
+    "f28",
+    "f29"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "openid",
+   "tier": "basic",
+   "effect": "OpenID Connect sign-in. Required for the OIDC flow.",
+   "evidence_ids": [
+    "f10",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "offline_access",
+   "tier": "basic",
+   "effect": "Needed to get a refresh token. The offline session closes after 1 year without renewal.",
+   "evidence_ids": [
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "*_edit scopes (e.g. contact_edit, kb_invoice_edit)",
+   "tier": "unknown",
+   "effect": "Write access. Read access on the same resource is granted automatically. No review is tied to any scope.",
+   "evidence_ids": [
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "accounting",
+   "tier": "unknown",
+   "effect": "Write access to accounting data.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "file",
+   "tier": "unknown",
+   "effect": "Read and write access to the inbox.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "payroll_employee_*, payroll_paystub_show, payroll_absence_*",
+   "tier": "unknown",
+   "effect": "Part of Composio's default list. bexio doesn't classify them as sensitive, but leave them out unless you need them, because adding scopes later means every user has to authorize again.",
+   "evidence_ids": [
+    "f15",
+    "f17"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Login page shows 'Something went wrong. Client nicht gefunden.' (HTTP 400)",
+   "cause": "The client_id is wrong or unknown to bexio.",
+   "fix": "Copy the Client ID again from 'App Details' in the developer portal into your Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "f13",
+    "f5"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "Sign-in stops with a redirect error",
+   "cause": "The redirect URI Composio sends doesn't exactly match an 'Allowed redirect URL' on the app.",
+   "fix": "Paste the exact callback URL from your Composio auth config into the app's allowed redirect URLs.",
+   "contact": null,
+   "evidence_ids": [
+    "f8",
+    "f40"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "HTTP 429 responses",
+   "cause": "Per-company per-minute rate limit. The number isn't published.",
+   "fix": "Read the RateLimit-Remaining and RateLimit-Reset headers and back off.",
+   "contact": null,
+   "evidence_ids": [
+    "f33",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Calls are denied after you add new features",
+   "cause": "Scopes are fixed at consent, and refreshing the token doesn't add scopes. Calls are also limited by the user's own bexio rights.",
+   "fix": "Have users authorize again with the new scope list, and check the bexio user rights of whoever authorized.",
+   "contact": null,
+   "evidence_ids": [
+    "f17",
+    "f18",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Token request rejected",
+   "cause": "Parameters were sent in the query string.",
+   "fix": "Send all token endpoint parameters in the POST body.",
+   "contact": null,
+   "evidence_ids": [
+    "f21"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "bexio",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "openid",
+   "offline_access",
+   "accounting",
+   "article_edit",
+   "article_show",
+   "bank_account_show",
+   "bank_payment_edit",
+   "bank_payment_show",
+   "contact_edit",
+   "contact_show",
+   "file",
+   "kb_article_order_edit",
+   "kb_article_order_show",
+   "kb_bill_show",
+   "kb_delivery_edit",
+   "kb_delivery_show",
+   "kb_invoice_edit",
+   "kb_invoice_show",
+   "kb_offer_edit",
+   "kb_offer_show",
+   "kb_order_edit",
+   "kb_order_show",
+   "monitoring_edit",
+   "monitoring_show",
+   "note_edit",
+   "note_show",
+   "payroll_absence_edit",
+   "payroll_absence_show",
+   "payroll_employee_edit",
+   "payroll_employee_show",
+   "payroll_paystub_show",
+   "project_edit",
+   "project_show",
+   "stock_edit",
+   "task_edit",
+   "task_show"
+  ],
+  "note": "Composio has no managed OAuth app for bexio, so you must register your own app in developer.bexio.com and enter its Client ID and Secret in a Composio auth config. This is quick and needs no review. Register the exact callback URL shown in your auth config as an 'Allowed redirect URL'. The catalog default is https://backend.composio.dev/api/v1/auth-apps/add, but a probe used .../api/v3/toolkits/auth/callback. Trim the default scope list of about 37 scopes to what you need, because changing scopes later means every user has to authorize again."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "The developer portal at developer.bexio.com responds publicly with the title 'bexio Developer Portal'.",
+   "source_url": "https://developer.bexio.com",
+   "quote": "bexio Developer Portal",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Setup starts with a bexio account, then you log in to the developer portal with bexio credentials.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Go to the developer portal at https://developer.bexio.com and log in using your bexio credentials.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "You must accept the portal terms before creating an app, with attention to Section 4.4 commercial use.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Read and accept the terms and conditions (please pay special attention to the commercial use regulations mentioned in Section 4.4).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "bexio does not restrict API access; anyone can build an integration.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "We do not restrict API access: anyone can develop an integration with bexio.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Create an app, define 'Allowed redirect URL', then reveal the Client ID and Secret under 'App Details'.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Create a new app and make sure that you define a valid site for the \"Allowed redirect URL\" field(s)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Redirect URLs must be defined during app registration.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "The new bexio API platform requires to define redirect URLs during the app registration in the developer port",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Up to ten redirect addresses per app (third-party guide).",
+   "source_url": "https://www.strainovic-it.ch/en/ratgeber/bexio-api-wordpress/",
+   "quote": "Up to ten addresses are possible, for instance for test and production.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The redirect URL must match the portal entry exactly.",
+   "source_url": "https://www.strainovic-it.ch/en/ratgeber/bexio-api-wordpress/",
+   "quote": "it has to match the Developer Portal exactly, otherwise sign-in stops with an error message.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Authorization code flow with the client secret at exchange; the app must be server-side.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Your app must be server-side because during this exchange, you must also pass along your application's Client Secret",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "The OIDC issuer is https://auth.bexio.com/realms/bexio.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Issuer https://auth.bexio.com/realms/bexio",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "The realm discovery document is published and returns the issuer.",
+   "source_url": "https://auth.bexio.com/realms/bexio/.well-known/openid-configuration",
+   "quote": "\"issuer\":\"https://auth.bexio.com/realms/bexio\"",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "The generic discovery path returns 404.",
+   "source_url": "https://auth.bexio.com/.well-known/openid-configuration",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "An invalid client_id returns HTTP 400 'Client nicht gefunden'.",
+   "source_url": "https://auth.bexio.com/realms/bexio/protocol/openid-connect/auth",
+   "quote": "Something went wrong. Client nicht gefunden.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "A write scope automatically grants read access to the same resource.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Read access is granted automatically when a write scope is requested for a resource.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "The docs list scopes with read/write descriptions and no sensitive classification.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "accounting Write access to accounting data",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Scopes are separated by whitespace.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Multiple scopes have to be separated by a whitespace.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "New scopes require going through authorization again.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Acquiring new scopes is only possible by going through the initial authorization process again.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "API access is limited by both the granted scopes and the authorizing user's rights.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "The API access happens with the user rights of the user who set up the connection to the application.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Refresh tokens come with offline_access; the offline session closes after 1 year without renewal.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "The returned refresh token will be valid indefinitely but the associated offline session will be closed if not renewed within 1 year.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Refresh uses grant_type refresh_token.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "Make sure you use the grant type \"refresh_token\".",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Token endpoint parameters must be in the request body.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "all parameters must be passed in the request body.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Marketplace listing requires at least 10 bexio customers.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "At least 10 bexio customers (SMEs or fiduciaries) among your regular clientele.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Marketplace listing requires at least 20 active users.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "At least 20 active users of your app.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Marketplace listing requires the bexio API and OpenID Connect login.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "Integration via bexio API and OpenID Connect login.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "The app must be in 2 languages and marketplace content in all 4.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "app in two languages, marketplace content in all four.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Applications go through a form, followed by a partnership process.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": "Simply fill out the form so that we can get to know your solution better and start the ball rolling on the partnership process",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "25% service fee on revenue from shared bexio users (20% for top partners).",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/marketplace-partner-agreement",
+   "quote": "we charge a service fee of 25% on the revenue generated with shared bexio users.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "bexio collects payments from bexio customers, and the partner must keep price parity.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/marketplace-partner-agreement",
+   "quote": "you grant bexio the right to collect all payments for your solution directly from all bexio customers",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Partners support their own customers.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/marketplace-partner-agreement",
+   "quote": "bexio does not offer direct support for partner solutions",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "Listing texts and visuals are required in all four languages.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/marketplace-partner-agreement",
+   "quote": "This includes descriptive texts, supporting visual materials in all four languages",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "No review timeline or privacy/logo/video/security requirement was found on the marketplace pages.",
+   "source_url": "https://www.bexio.com/en-CH/marketplace/become-a-marketplace-partner",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Per-company per-minute rate limit, HTTP 429, and RateLimit-* headers.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "The bexio API enforces a rate limit that limits the number of requests a company can make per minute.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "The rate limit number is not published.",
+   "source_url": "https://docs.maesn.com/rate-limits",
+   "quote": "Currently, the limit is not published.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "No separate limit or install cap for unreviewed apps was found; the limit is per company.",
+   "source_url": "https://docs.bexio.com/",
+   "quote": "the number of requests a company can make per minute.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "Composio has no managed OAuth for bexio.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/bexio",
+   "quote": "\"managed_oauth_available\": false",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "Composio's catalog default redirect is https://backend.composio.dev/api/v1/auth-apps/add.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/bexio",
+   "quote": "https://backend.composio.dev/api/v1/auth-apps/add",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f40",
+   "claim": "Composio's probe used a different callback (https://backend.composio.dev/api/v3/toolkits/auth/callback).",
+   "source_url": "https://auth.bexio.com/realms/bexio/protocol/openid-connect/auth",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Which Composio callback URL (v1 auth-apps/add or v3 toolkits/auth/callback) your auth config uses, and whether bexio accepts it. Neither was tested.",
+  "Whether an unlisted developer-portal app has any install cap, user cap or development-mode restriction isn't documented.",
+  "Whether you need a bexio admin account to create apps. Third-party guides say yes, bexio's docs don't say.",
+  "Whether bexio supports PKCE isn't documented.",
+  "Access token lifetime isn't stated. Only the 1-year offline session idle timeout is documented.",
+  "No timeline is published for the marketplace partnership process.",
+  "What exactly Section 4.4 (commercial use) of the developer terms requires wasn't retrieved."
+ ],
+ "slug": "bexio_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:30:36+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 25,
+  "probes_run": 4,
+  "research_seconds": 156,
+  "est_cost_usd": 0.2937,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0422,
+   "claude-opus-5-5": 0.2515
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 18,
+    "out": 15661,
+    "cache_read": 272740,
+    "cache_write": 103909,
+    "search": 2
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 9553,
+    "cache_read": 0,
+    "cache_write": 12084,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

@@ -1,0 +1,682 @@
+{
+ "app": {
+  "name": "X (Twitter)",
+  "website": "https://x.com",
+  "developer_portal_url": "https://console.x.com",
+  "oauth_docs_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+  "category": "Social media"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "The X docs we read describe no app review: once OAuth 2.0 is turned on for your app, any X user can authorize it. You still have to bring your own app, because Composio has no managed app for X. The other requirement is money: the X API is pay-per-use, so the developer account needs prepaid credits before API calls work.",
+  "hands_on_effort": "30-60 min",
+  "time_to_first_connection": "20-40 min (including buying credits)",
+  "approval_wait": "none (no review found in the X docs)"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Developer Console app (your own account)",
+   "unlocks": "You can connect your own X account through Composio and make billed API calls.",
+   "limits": [
+    "Access tokens last 2 hours. You only get a refresh token if you request offline.access",
+    "API calls are paid from prepaid credits (e.g. Post read $0.005, Post create $0.015, Post create with URL $0.200)",
+    "Client ID and Secret are shown only once"
+   ],
+   "time_to_reach": "20-40 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "e2",
+    "e3",
+    "e4",
+    "e8",
+    "e12",
+    "e14"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Other X users authorizing your app (no allowlist)",
+   "unlocks": "Other X users can authorize your app. The docs we read describe no test-user allowlist and no separate testing mode.",
+   "limits": [
+    "Rate limits per user and per app, e.g. POST /2/tweets: 100 per 15 min per user and 10,000 per 24 h per app",
+    "Pay-per-use is capped at 3 million Post reads per monthly billing cycle",
+    "Every user's API calls are billed to your credits"
+   ],
+   "time_to_reach": "Same moment as Gate 1",
+   "requires_review": false,
+   "evidence_ids": [
+    "e18",
+    "e17",
+    "e13",
+    "e12"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public use (pay-per-use or Enterprise)",
+   "unlocks": "Any X user, at production volume. No review, verification or marketplace listing was found in the X docs. Above 3M Post reads per month you need Enterprise, which has its own application form.",
+   "limits": [
+    "3M Post reads per month on pay-per-use",
+    "Basic and Pro subscriptions are reportedly closed to new signups, so the only choices are pay-per-use or Enterprise"
+   ],
+   "time_to_reach": "Same moment as Gate 1. Enterprise timeline unknown",
+   "requires_review": false,
+   "evidence_ids": [
+    "e18",
+    "e13",
+    "e15"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Sign in to the X Developer Console and accept the agreement",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Go to console.x.com and sign in with your X account. Accept the Developer Agreement and Policy, then fill in the developer profile describing how you'll use the API. The legacy developer.x.com portal URL just redirects to the X login page, so use console.x.com.",
+   "url": "https://console.x.com",
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e2",
+    "e22"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Add a payment card and buy API credits",
+   "owner": "you",
+   "gate": 1,
+   "detail": "The X API is pay-per-use, and credits are deducted per resource read or write. Buy credits in the Developer Console. Saving your first eligible card and making your first purchase gets you $20 in free credits, and X matches your first auto-recharge up to $50.",
+   "url": "https://console.x.com",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "It's unclear whether the OAuth authorize and token exchange works with zero credits. Expect API calls to fail until you buy credits."
+   ],
+   "evidence_ids": [
+    "e12",
+    "e14",
+    "e15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a new app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the console, click 'New App' and enter a name, description and use case.",
+   "url": "https://console.x.com",
+   "values": [],
+   "est_time": "3 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Turn on OAuth 2.0 and set app permissions",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the app and edit User authentication settings to enable OAuth 2.0 (it works with API v2 only). Under App permissions, choose 'Read and Write and Direct Messages', because Composio's default scopes include dm.read and dm.write.",
+   "url": null,
+   "values": [],
+   "est_time": "3 min",
+   "gotchas": [
+    "The UI field names come from community guides, not official docs.",
+    "How the App permissions setting interacts with the dm.* scopes isn't confirmed. If DM tools fail, check this setting first."
+   ],
+   "evidence_ids": [
+    "e4",
+    "e19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Choose a confidential client type",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Under Type of App, select 'Web App, Automated App or Bot'. This is a confidential client type, so you get a Client Secret, which Composio's server-side flow needs. Native App and Single page App are public clients and don't get a secret.",
+   "url": null,
+   "values": [],
+   "est_time": "1 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e5",
+    "e19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Fill in App info: Callback URI and Website URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the App info section, paste the exact callback URL shown in your Composio auth config as the Callback URI / Redirect URL. X requires an exact match. Also enter a Website URL. Requesting user email is a separate toggle, so leave it off unless you need it.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "3 min",
+   "gotchas": [
+    "Composio's toolkit metadata lists https://backend.composio.dev/api/v1/auth-apps/add, but current flows send https://backend.composio.dev/api/v3/toolkits/auth/callback. Register the URL your auth config actually shows, or register both.",
+    "Developers with no website often get stuck on the Website URL field. Have a URL ready before you start."
+   ],
+   "evidence_ids": [
+    "e6",
+    "e1",
+    "e19",
+    "e20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save the Client ID and Client Secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Copy the OAuth 2.0 Client ID and Client Secret into a secrets manager straight away. They are displayed only once, and regenerating them invalidates the old ones.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create the Composio auth config",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Create an OAuth2 auth config for the twitter toolkit using your Client ID and Secret. Composio's defaults are authorize https://x.com/i/oauth2/authorize and token https://api.x.com/2/oauth2/token. Keep offline.access in the scopes, or no refresh token is issued and connections die after 2 hours.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorize URL",
+     "value": "https://x.com/i/oauth2/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://api.x.com/2/oauth2/token"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e1",
+    "e8",
+    "e10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Connect your own account and run a test call",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection, authorize with your own X account, then make a cheap call such as reading your own profile. X doesn't check an invalid client_id until after login, so an error that only appears after you sign in usually means a wrong Client ID or callback.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e23",
+    "e9",
+    "e7",
+    "e14"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Prepare for multiple users: refresh handling, rate limits, spend",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Make sure tokens are refreshed one at a time per connection. Community reports say refresh tokens rotate and work only once, so a concurrent refresh can force the user to re-authenticate. Monitor per-user and per-app rate limits and your credit balance, and set up auto-recharge. Apply for Enterprise if you'll go over 3M Post reads per month.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "e21",
+    "e17",
+    "e13",
+    "e12"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "X account and accepted Developer Agreement and Policy",
+   "gate": 1,
+   "detail": "You need these to open the Developer Console and create apps.",
+   "evidence_ids": [
+    "e2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Prepaid API credits",
+   "gate": 1,
+   "detail": "API calls are paid from credits bought in the console. There is no subscription option for new developers.",
+   "evidence_ids": [
+    "e12",
+    "e15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Confidential client type (Web App, Automated App or Bot)",
+   "gate": 1,
+   "detail": "You need this to get a Client Secret.",
+   "evidence_ids": [
+    "e5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Exact-match Callback URL",
+   "gate": 1,
+   "detail": "The redirect_uri must exactly match a Callback URL registered in the app settings.",
+   "evidence_ids": [
+    "e6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Website URL",
+   "gate": 1,
+   "detail": "Required in the App info section of the authentication settings.",
+   "evidence_ids": [
+    "e20"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "PKCE",
+   "gate": 1,
+   "detail": "Required for the authorization code flow. Composio handles it.",
+   "evidence_ids": [
+    "e7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Enterprise plan for high volume",
+   "gate": 3,
+   "detail": "Needed above 3M Post reads per month.",
+   "evidence_ids": [
+    "e13"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "offline.access",
+   "tier": "basic",
+   "effect": "Without it no refresh token is issued, and connections expire after 2 hours.",
+   "evidence_ids": [
+    "e8",
+    "e11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "dm.read / dm.write",
+   "tier": "basic",
+   "effect": "No scope review is documented. Community guides suggest the app permission must be set to 'Read and Write and Direct Messages'.",
+   "evidence_ids": [
+    "e11",
+    "e19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "tweet.write, like.write, follows.write, list.write, block.write, mute.write, bookmark.write, media.write, tweet.moderate.write",
+   "tier": "basic",
+   "effect": "No review is documented. Requires the 'Read and Write' (or higher) app permission. Write calls are billed per request.",
+   "evidence_ids": [
+    "e11",
+    "e19",
+    "e12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "tweet.read, users.read, follows.read, like.read, list.read, block.read, mute.read, bookmark.read, space.read",
+   "tier": "basic",
+   "effect": "Read scopes. Every resource read is billed. Owned reads (your own data) cost $0.001 each.",
+   "evidence_ids": [
+    "e11",
+    "e14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "users.email",
+   "tier": "unknown",
+   "effect": "Not in Composio's defaults. Turned on with a separate toggle in the auth settings. It may require Privacy Policy and Terms URLs (unconfirmed).",
+   "evidence_ids": [
+    "e11",
+    "e19"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Calls fail or are rejected after a successful connection",
+   "cause": "There are no prepaid credits on the developer account.",
+   "fix": "Buy credits in the Developer Console, and consider turning on auto-recharge.",
+   "contact": null,
+   "evidence_ids": [
+    "e12",
+    "e14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "The authorize page shows an error about the redirect or callback",
+   "cause": "The callback URL doesn't exactly match the one Composio sends (v1 vs v3 callback path).",
+   "fix": "Copy the exact callback URL from the Composio auth config into the Callback URI field. Register both variants if you're unsure.",
+   "contact": null,
+   "evidence_ids": [
+    "e6",
+    "e1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "There is no Client Secret to paste into Composio",
+   "cause": "The app type was set to Native App or Single page App, which are public clients.",
+   "fix": "Change Type of App to 'Web App, Automated App or Bot'.",
+   "contact": null,
+   "evidence_ids": [
+    "e5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "You can't save the user authentication settings",
+   "cause": "The Website URL field is required, and new developers often have no site to enter.",
+   "fix": "Enter any website or landing page you control.",
+   "contact": null,
+   "evidence_ids": [
+    "e20"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Users are logged out after 2 hours or must reconnect at random",
+   "cause": "offline.access is missing, or concurrent or repeated use of the single-use refresh token invalidated it.",
+   "fix": "Request offline.access and refresh tokens one at a time per connection.",
+   "contact": null,
+   "evidence_ids": [
+    "e8",
+    "e21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "The Client Secret is lost",
+   "cause": "Credentials are shown only once.",
+   "fix": "Regenerate the secret in the console (this invalidates the old one) and update the Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "e3"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "twitter",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "dm.write",
+   "dm.read",
+   "mute.read",
+   "mute.write",
+   "space.read",
+   "tweet.write",
+   "tweet.read",
+   "tweet.moderate.write",
+   "users.read",
+   "follows.read",
+   "follows.write",
+   "like.read",
+   "like.write",
+   "list.read",
+   "list.write",
+   "block.read",
+   "block.write",
+   "bookmark.read",
+   "bookmark.write",
+   "media.write",
+   "offline.access"
+  ],
+  "note": "Composio has no managed OAuth app for X, so you can't start on managed auth and must register your own app from the beginning. Create a confidential app (Web App, Automated App or Bot) in console.x.com and turn on OAuth 2.0. Register the exact callback URL your Composio auth config shows: it's likely https://backend.composio.dev/api/v3/toolkits/auth/callback, though toolkit metadata lists /api/v1/auth-apps/add. Paste the Client ID and Secret into the auth config. All API usage is billed to your X credits."
+ },
+ "evidence": [
+  {
+   "id": "e1",
+   "claim": "Composio's twitter toolkit has no managed OAuth. It uses https://x.com/i/oauth2/authorize and https://api.x.com/2/oauth2/token, requests 21 default scopes including offline.access, and lists default_redirect_uri https://backend.composio.dev/api/v1/auth-apps/add.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/twitter",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e2",
+   "claim": "Getting access means signing in to console.x.com, accepting the Developer Agreement and Policy, filling in a profile, then clicking 'New App' with a name, description and use case.",
+   "source_url": "https://docs.x.com/x-api/getting-started/getting-access.md",
+   "quote": "Review and accept the Developer Agreement and Policy.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e3",
+   "claim": "The console generates the credentials, including the OAuth 2.0 Client ID & Secret. They are shown only once, and regenerating invalidates the old ones.",
+   "source_url": "https://docs.x.com/x-api/getting-started/getting-access.md",
+   "quote": "Save immediately. Credentials are only displayed once.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e4",
+   "claim": "OAuth 2.0 must be enabled in the App's authentication settings in the Developer Console, and it works with X API v2 only.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "To enable OAuth 2.0 in your App, you must enable it in your App’s authentication settings found in the App settings section of the Developer Console.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e5",
+   "claim": "Native and Single page Apps are public clients. Web App and Automated App/bot are confidential clients that get a Client Secret.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "Native App and Single page Apps are public clients and Web App and Automated App or bots are confidential clients.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e6",
+   "claim": "redirect_uri must exactly match one of the Callback URLs in the App's settings.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "This value must correspond to one of the Callback URLs defined in your App’s settings. For OAuth 2.0, you will need to have exact match validation",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e7",
+   "claim": "PKCE is required (S256 or plain). Supported grants are authorization code with PKCE and refresh token.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "Specifies the method you are using to make a request (S256 OR plain).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e8",
+   "claim": "Access tokens last two hours, and a refresh token is issued only if offline.access is requested.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "If this scope is not passed, we will not generate a refresh token.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e9",
+   "claim": "The authorization code expires after 30 seconds.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": "The auth\\_code has a time limit of 30 seconds",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e10",
+   "claim": "The token endpoint is POST https://api.x.com/2/oauth2/token, and confidential clients authenticate with HTTP Basic using client_id:client_secret.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/user-access-token",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e11",
+   "claim": "The docs list the OAuth 2.0 scopes (tweet, users, follows, offline.access, dm, media, etc.) and describe no per-scope review tier.",
+   "source_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e12",
+   "claim": "The X API is pay-per-use with credits bought in the Developer Console, e.g. Posts read $0.005, Post create $0.015, Post create with URL $0.200.",
+   "source_url": "https://docs.x.com/x-api/getting-started/pricing",
+   "quote": "The X API uses **pay-per-usage** pricing. No subscriptions—pay only for what you use.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e13",
+   "claim": "Pay-per-use is capped at 3 million Post reads per monthly billing cycle. Above that requires Enterprise.",
+   "source_url": "https://docs.x.com/x-api/getting-started/pricing",
+   "quote": "Pay-per-usage plans are capped at **3 million Post reads per monthly billing cycle**.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e14",
+   "claim": "You get $20 in free credits on your first card save and purchase, plus a match of your first auto-recharge up to $50. Owned Reads cost $0.001 per resource.",
+   "source_url": "https://docs.x.com/x-api/getting-started/pricing",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e15",
+   "claim": "Third-party guides say pay-per-use became the default on Feb 6, 2026, and that Basic and Pro are closed to new signups.",
+   "source_url": "https://postproxy.dev/blog/x-api-pricing-2026/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "e17",
+   "claim": "Rate limits are separate from billing, per user and per app. POST /2/tweets allows 100 per 15 min per user and 10,000 per 24 h per app.",
+   "source_url": "https://docs.x.com/x-api/fundamentals/rate-limits",
+   "quote": "You can be within rate limits but still incur usage costs, or hit rate limits without additional cost.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "e18",
+   "claim": "None of the fetched X docs mention app review, verification or listing before third-party users can authorize an OAuth 2.0 app. Enterprise is a separate application.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "e19",
+   "claim": "Community guides describe the console flow: User authentication settings, App permissions (Read / Read and Write / Read and Write and Direct Messages), Type of App 'Web App, Automated App or Bot', App info with Callback URI and Website URL, and a separate email toggle.",
+   "source_url": "https://supabase.com/docs/guides/auth/social-login/auth-twitter",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "e20",
+   "claim": "App info asks for a Callback URI and a Website URL, and new developers get stuck on the Website URL field.",
+   "source_url": "https://devcommunity.x.com/t/user-authentication-settings/173310",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "e21",
+   "claim": "Community reports say refresh tokens rotate and are single-use, and concurrent refreshes can force re-authentication.",
+   "source_url": "https://devcommunity.x.com/t/refresh-token-expiring-with-offline-access-scope/168899",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "e22",
+   "claim": "console.x.com loads as 'Developer Console'. The legacy developer.x.com portal URL redirects to the x.com login page.",
+   "source_url": "https://console.x.com",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "e23",
+   "claim": "An authorize request with an invalid client_id reached the X login page, so client validation isn't visible before login.",
+   "source_url": "https://twitter.com/i/oauth2/authorize",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Does the OAuth authorize and token exchange work before any credits are bought, or are only API calls blocked?",
+  "Does the users.email scope require Privacy Policy and Terms of Service URLs in app settings?",
+  "How do the console App permissions (Read / Read and Write / Read and Write and Direct Messages) interact with the dm.* and write scopes Composio requests?",
+  "What is X's official refresh-token lifetime and rotation policy? (Only community reports of single-use rotation were found.)",
+  "Which Composio callback URL should be registered: /api/v1/auth-apps/add or /api/v3/toolkits/auth/callback?",
+  "Is there a cap on how many users can authorize a new app? What does the 'Public Utility App' free-access program require?",
+  "The console UI field names come from community guides. The official Developer Console docs page wasn't fetched."
+ ],
+ "slug": "twitter_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T05:11:30+00:00",
+  "model": "claude-opus-5-5 -> claude-opus-5-5",
+  "research_model": "claude-opus-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 69,
+  "probes_run": 5,
+  "research_seconds": 242,
+  "est_cost_usd": 0.737,
+  "cost_breakdown": {
+   "claude-opus-5-5": 0.737
+  },
+  "usage": {
+   "claude-opus-5-5": {
+    "in": 46,
+    "out": 17191,
+    "cache_read": 417790,
+    "cache_write": 49886,
+    "search": 6
+   }
+  },
+  "served_models": [
+   "claude-opus-5-5"
+  ]
+ }
+}

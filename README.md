@@ -4,6 +4,7 @@
 
 - **Live demo:** _<Render URL — pending deploy>_
 - Library: GitHub · Notion · Slack · HubSpot · Shopify · Gmail (Google). They span instant to heavy review.
+- Agent-generated library: 17 guides from the shipped configuration (Zoom, Salesforce, Outlook, Xero, DocuSign, Bexio, Clio, Calendly and more), labelled as not reviewed.
 - Every guide is available as HTML (`/g/<app>`), Markdown (`/g/<app>.md`) and JSON (`/g/<app>.json`).
 
 ## The problem as I understood it
@@ -79,10 +80,12 @@ python -m evals.run --variant baseline && python -m evals.run --variant v1 && py
 python -m evals.compare                                                  # side by side: does cheaper routing hold quality?
 ```
 
-**Results (8 configurations, about 250 graded guides):**
+**Results (9 configurations, about 290 graded guides, two judge models):**
 - The shipped configuration does Haiku research, steered by code (a coverage gate and a research plan), then Opus writing, with code locking every quote.
-- It matches all-Opus on key-fact recall within noise (0.88 vs 0.92) and beats it on evidence quality (quote support 0.71 vs 0.64).
-- It costs **55% less** ($0.40 vs $0.89 per guide).
+- It matches all-Opus on key-fact recall (0.90 vs 0.93; 0.94 under an Opus judge) and beats it on evidence quality (quote support 0.70 vs 0.65).
+- It costs **55% less** ($0.40 vs $0.87 per guide).
+- On 17 apps with no answer key, it matches or beats all-Opus on every measure.
+- Sonnet was tested as the writer and rejected: half the cost, but weaker recall and difficulty judgement.
 - Each mechanism was added because the eval exposed a specific failure: Haiku read too little, missed changelogs, and invented evidence when writing.
 
 Full table and findings: [VERIFICATION.md](VERIFICATION.md#eval-results-routing-and-harness-steering-2026-1028-29). Reasoning: [DECISIONS.md](DECISIONS.md).

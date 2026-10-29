@@ -1,0 +1,904 @@
+{
+ "app": {
+  "name": "Salesforce",
+  "website": "https://www.salesforce.com",
+  "developer_portal_url": "https://help.salesforce.com/s/articleView?id=005228017&language=en_US&type=1",
+  "oauth_docs_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+  "category": "CRM"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "If you have Setup access to a Salesforce org, you can create a Local External Client App (ECA) and connect your own org with no review. A Local ECA only works in the org where you created it. To serve other customers' orgs you need a Packaged ECA in a managed package, four mandatory OAuth security controls, and, for an AppExchange listing, a paid security review that third parties say takes weeks.",
+  "hands_on_effort": "30-60 min for your own org; several days to weeks to package, harden and prepare an AppExchange security review",
+  "time_to_first_connection": "About 30 min, if you already have an org with permission to create External Client Apps",
+  "approval_wait": "None for your own org. AppExchange security review: 4-6 weeks of testing (reported by third parties), plus several weeks for each resubmission."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Local External Client App (your org)",
+   "unlocks": "OAuth connections from users in the single org where you created the ECA, including your own account through Composio.",
+   "limits": [
+    "A Local ECA works only in the org where it was created and is not copied when a sandbox is cloned.",
+    "New Connected Apps can no longer be created (Spring '26) unless Salesforce Support enables it, so use an ECA.",
+    "Creating an ECA requires permissions to create, edit and delete External Client Apps.",
+    "5 active access grants per user per app; older grants are revoked (reported by third parties)."
+   ],
+   "time_to_reach": "About 30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f30",
+    "f23"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Packaged ECA installed in a few customer orgs",
+   "unlocks": "Users in other orgs that install your managed package containing the Packaged ECA.",
+   "limits": [
+    "Only Packaged ECAs can go into 2GP managed packages and travel to other orgs.",
+    "Once an app is used in more than two customer production orgs, four controls are mandatory (May 11, 2026 deadline): PKCE, refresh token rotation, refresh token idle TTL and a refresh token IP allowlist.",
+    "With idle TTL on, refresh tokens unused for 30 days expire (invalid_grant).",
+    "The findings do not confirm whether a package can be installed in other orgs without passing security review."
+   ],
+   "time_to_reach": "Days: build a 2GP managed package and harden the OAuth flow",
+   "requires_review": false,
+   "evidence_ids": [
+    "f7",
+    "f9",
+    "f11",
+    "f13"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "AppExchange listing (security review)",
+   "unlocks": "A public AppExchange listing that any Salesforce customer can find and install.",
+   "limits": [
+    "The packaged ECA configuration and every integration the app uses (web apps, REST APIs, mobile and desktop apps) are reviewed.",
+    "Review fee: sources conflict between $999 per paid-app submission ($0 for free apps) and $2,700 per submission.",
+    "Listed apps are re-reviewed periodically (every 6 months to 2 years, reported by third parties).",
+    "Failing to implement the mandatory controls can lead to de-listing or suspension of the app's access to Salesforce services."
+   ],
+   "time_to_reach": "Weeks: 4-6 weeks of security testing (reported by third parties), plus several weeks for each resubmission",
+   "requires_review": true,
+   "evidence_ids": [
+    "f12",
+    "f14",
+    "f16",
+    "f17",
+    "f19",
+    "f20",
+    "f21",
+    "f36",
+    "f15"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Get a Salesforce org where you can create External Client Apps",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Use an org where your user has permission to create, edit and delete External Client Apps, for example a Developer Edition org or your company's sandbox. The probe could not reach the Developer Edition signup page, so check that signup works for you.",
+   "url": "https://developer.salesforce.com/signup",
+   "values": [],
+   "est_time": "5-15 min",
+   "gotchas": [
+    "Do not try to create a Connected App. Since Spring '26, creation is blocked in the UI, the API and the Metadata API unless Salesforce Support enables it."
+   ],
+   "evidence_ids": [
+    "f30",
+    "f31",
+    "f4",
+    "f37"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Copy the callback URL from your Composio auth config",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, start a custom auth config for the salesforce toolkit and copy the exact callback URL it shows. You will paste this into the ECA.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "2 min",
+   "gotchas": [
+    "Two different Composio callbacks appeared in the research: backend.composio.dev/api/v1/auth-apps/add (catalog default) and backend.composio.dev/api/v3/toolkits/auth/callback. Use whichever your Composio dashboard shows."
+   ],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Create a Local External Client App",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Setup, open App Manager (or External Client App Manager) and create a new External Client App. Set Distribution State to Local if only one org will use it. Choose Packaged if you plan to distribute it to other orgs.",
+   "url": "https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.create_a_local_external_client_app.htm",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "A Local ECA is not copied when a sandbox is cloned and cannot be packaged. If you will need distribution later, start with Packaged."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Enable OAuth and set callback URL and scopes",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the app's API section, enable OAuth settings. Paste the Composio callback URL as the callback URL and select scopes. Use the fewest scopes that work: usually api, refresh_token (or offline_access) and openid instead of Composio's default full.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    },
+    {
+     "label": "OAuth scopes",
+     "value": "api, refresh_token, openid (add full only if you really need it)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Without refresh_token or offline_access, no refresh token is issued and connections break with expired-token errors.",
+    "Set the same scopes in your Composio auth config so the authorization request matches."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f25",
+    "f26",
+    "f27",
+    "f28",
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Configure the refresh token policy and security controls",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the ECA OAuth policies, pick a refresh token policy (the default is 'valid until revoked'). Turn on PKCE (S256 is the only supported method) and decide on refresh token rotation and idle TTL. These controls become mandatory once the app is used in more than two customer production orgs.",
+   "url": null,
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [
+    "With idle TTL on, refresh tokens unused for 30 days expire and return invalid_grant.",
+    "With rotation on, reusing an old refresh token can revoke all of that user's refresh tokens and sessions for the app (reported by third parties)."
+   ],
+   "evidence_ids": [
+    "f22",
+    "f3",
+    "f9",
+    "f10",
+    "f11",
+    "f24"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Copy the consumer key and secret into Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the ECA's OAuth settings section, copy the Consumer Key and Consumer Secret, and paste them into your Composio Salesforce auth config as the client ID and client secret.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "The key and secret sit in the ECA's global settings file, which is never packaged. Keep them in a secret store, not in source control."
+   ],
+   "evidence_ids": [
+    "f39",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a Composio connection and authorize with your own Salesforce user. Check that you get an access token and a refresh token. An invalid_client_id error means the consumer key is wrong or the app is not yet active.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Each user can hold at most 5 active grants per app; repeated test connections revoke older ones (reported by third parties)."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f23"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Switch to a Packaged ECA in a 2GP managed package for other orgs",
+   "owner": "you",
+   "gate": 2,
+   "detail": "To serve customer orgs, create (or recreate) the ECA with Distribution State Packaged and add it to a 2GP managed package. Salesforce says the authorization code flow needs packaging when you, the vendor, control the callback URLs.",
+   "url": null,
+   "values": [],
+   "est_time": "1-3 days",
+   "gotchas": [
+    "In most cases Connected Apps and ECAs must be packaged before you can submit for security review."
+   ],
+   "evidence_ids": [
+    "f7",
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Implement the four mandatory OAuth controls in your client",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Send code_challenge/code_verifier (S256) on every authorization request, support refresh token rotation, handle invalid_grant by asking the user to reconnect, and set up the refresh token IP allowlist. Do not use the User Agent flow or the username-password flow.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 days",
+   "gotchas": [
+    "Not meeting these controls can lead to AppExchange de-listing or suspension of the app's access to Salesforce services."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f11",
+    "f15",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Join the Salesforce partner program",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Sign up for the Partner Community, accept the Partner Distribution Agreement and get a Partner Business Org. Third-party sources say signup costs nothing; the review fee is separate.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f17",
+    "f18"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Prepare the security review submission",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Assemble a developer org with the managed package installed, a source-code scanner report, DAST scan reports for every external endpoint (including your agent backend), and test credentials for login-protected endpoints. Check for missing state parameters, weak redirect URI validation and tokens that don't expire soon enough.",
+   "url": null,
+   "values": [],
+   "est_time": "2-5 days",
+   "gotchas": [],
+   "evidence_ids": [
+    "f34",
+    "f35",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit for security review and pay the fee",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Submit the packaged solution for AppExchange security review in the Partner portal and complete the listing. Check the current fee in the portal; third-party figures range from $999 to $2,700 per submission, with free apps reportedly exempt.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f16",
+    "f19",
+    "f20",
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for review results",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Third parties report 4-6 weeks of security testing once you are in the queue. Each failed attempt adds several weeks for resubmission. Expect re-reviews every 6 months to 2 years after you are listed.",
+   "url": null,
+   "values": [],
+   "est_time": "4-6+ weeks",
+   "gotchas": [],
+   "evidence_ids": [
+    "f21",
+    "f36"
+   ],
+   "support": "community"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Permission to create, edit and delete External Client Apps in your org",
+   "gate": 1,
+   "detail": "Connected App creation also needs Customize Application plus Modify All Data or Manage Connected Apps, but new Connected Apps are blocked anyway.",
+   "evidence_ids": [
+    "f30",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "refresh_token or offline_access scope",
+   "gate": 1,
+   "detail": "Needed for long-lived connections. Without it you get expired-token errors.",
+   "evidence_ids": [
+    "f25"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "PKCE with S256",
+   "gate": 2,
+   "detail": "Every authorization request must include code_challenge/code_verifier. S256 is the only advertised method.",
+   "evidence_ids": [
+    "f3",
+    "f10"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "Refresh token rotation, idle TTL (30 days) and IP allowlist",
+   "gate": 2,
+   "detail": "Mandatory when the app is used in more than two customer production orgs (deadline May 11, 2026). Clients must handle invalid_grant.",
+   "evidence_ids": [
+    "f9",
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Packaged ECA in a 2GP managed package",
+   "gate": 2,
+   "detail": "Only Packaged ECAs can be distributed to other orgs. Packaging is usually required before security review.",
+   "evidence_ids": [
+    "f7",
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Partner account and Partner Business Org",
+   "gate": 3,
+   "detail": "Needed before you can list on AppExchange (reported by third parties).",
+   "evidence_ids": [
+    "f17",
+    "f18"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "Passed AppExchange security review",
+   "gate": 3,
+   "detail": "Covers the ECA configuration and every integration the app uses. Submission includes scanner and DAST reports and test credentials.",
+   "evidence_ids": [
+    "f12",
+    "f16",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Security review fee",
+   "gate": 3,
+   "detail": "Sources conflict: $999 per paid submission ($0 for free apps) vs $2,700. Confirm in the Partner portal.",
+   "evidence_ids": [
+    "f19",
+    "f20"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "full",
+   "tier": "unknown",
+   "effect": "Composio's managed default. Grants broad access. Salesforce recommends keeping scopes minimal, so prefer api unless you need full.",
+   "evidence_ids": [
+    "f1",
+    "f26",
+    "f28"
+   ],
+   "support": "verified"
+  },
+  {
+   "scope": "api",
+   "tier": "unknown",
+   "effect": "Standard scope for REST API access, used in ECA setup examples. Enough for most CRM agent actions.",
+   "evidence_ids": [
+    "f27",
+    "f28"
+   ],
+   "support": "verified"
+  },
+  {
+   "scope": "refresh_token / offline_access",
+   "tier": "unknown",
+   "effect": "Required to get a refresh token. Leaving it out is a common cause of expired-token errors.",
+   "evidence_ids": [
+    "f25",
+    "f27",
+    "f28"
+   ],
+   "support": "verified"
+  },
+  {
+   "scope": "openid",
+   "tier": "basic",
+   "effect": "Returns OIDC identity information. Part of Composio's default set.",
+   "evidence_ids": [
+    "f1",
+    "f28"
+   ],
+   "support": "verified"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "You can't create a new Connected App in Setup, and the Metadata API rejects it too.",
+   "cause": "Since Spring '26, Salesforce blocks customers from creating new Connected Apps unless Support enables it.",
+   "fix": "Create an External Client App instead, which Salesforce recommends for new integrations.",
+   "contact": "Salesforce Support (only if you truly need a Connected App)",
+   "evidence_ids": [
+    "f4",
+    "f33",
+    "f37",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Users from another org can't authorize your app.",
+   "cause": "A Local ECA works only in the org where it was created.",
+   "fix": "Use a Packaged ECA in a 2GP managed package and have the other org install it.",
+   "contact": null,
+   "evidence_ids": [
+    "f7",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "invalid_grant / expired refresh token errors, and users keep being asked to reconnect.",
+   "cause": "The refresh_token or offline_access scope is missing, the 30-day idle TTL expired the token, rotation reuse revoked all tokens, or the 5-grants-per-user cap was exceeded.",
+   "fix": "Request refresh_token or offline_access, persist rotated tokens atomically, avoid repeated test connections, and handle invalid_grant by prompting the user to reconnect.",
+   "contact": null,
+   "evidence_ids": [
+    "f25",
+    "f11",
+    "f24",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Your integration that logs in with username and password stops working after moving to an ECA.",
+   "cause": "ECAs do not support the username-password OAuth flow.",
+   "fix": "Move to the authorization code flow with PKCE (or JWT Bearer or client credentials where appropriate).",
+   "contact": null,
+   "evidence_ids": [
+    "f29",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Canvas exposure or push notifications are missing on your ECA.",
+   "cause": "ECAs do not support these features yet (reported by third parties).",
+   "fix": "Design without them, or ask Salesforce Support whether a Connected App exception is possible.",
+   "contact": null,
+   "evidence_ids": [
+    "f38"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Security review fails, or the app is de-listed or suspended.",
+   "cause": "OAuth flaws (missing state parameter, weak redirect URI validation, tokens that don't expire soon enough) or the four mandatory controls are not implemented.",
+   "fix": "Implement PKCE, rotation, idle TTL and the IP allowlist. Validate state and redirect URIs. Run scanner and DAST tools before you submit.",
+   "contact": null,
+   "evidence_ids": [
+    "f35",
+    "f15",
+    "f9"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "salesforce",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "full",
+   "refresh_token",
+   "openid"
+  ],
+  "note": "Composio's managed Salesforce OAuth app (login.salesforce.com endpoints) is fine for prototyping and for connecting your own org. Register your own External Client App when you need your own consumer key and secret, control over callback and scopes, or to ship to customer orgs. Create an ECA, not a Connected App, because new Connected Apps are blocked since Spring '26. Paste the exact callback URL from your Composio auth config. The research found two candidate URLs (api/v1/auth-apps/add and api/v3/toolkits/auth/callback), so trust what your dashboard shows."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio's catalog lists managed OAUTH2 for Salesforce with default scopes full, refresh_token, openid and the login.salesforce.com authorize and token URLs.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/salesforce",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f2",
+   "claim": "Salesforce's authorize endpoint is live and rejects an unknown client_id with invalid_client_id (HTTP 400).",
+   "source_url": "https://login.salesforce.com/services/oauth2/authorize",
+   "quote": "error=invalid_client_id&error_description=client identifier invalid",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Salesforce's OIDC discovery document advertises S256 as the only PKCE method, plus a revocation endpoint.",
+   "source_url": "https://login.salesforce.com/.well-known/openid-configuration",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Salesforce stopped letting customers create new Connected Apps in Spring '26 unless Salesforce Support enables it; package installation is the other route.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005228017&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Salesforce says new integrations should use External Client Apps rather than Connected Apps.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005318040&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "An ECA is created in Setup through App Manager or External Client App Manager, with Distribution State Local or Packaged, then OAuth is enabled in the API section.",
+   "source_url": "https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.create_a_local_external_client_app.htm",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "A Local ECA works only in its own org and is not copied on sandbox clone; only Packaged ECAs are copied and can go into 2GP managed packages.",
+   "source_url": "https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.external_client_apps.htm&type=5",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The ECA consumer key and secret live in a global settings file that is never packaged.",
+   "source_url": "https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.external_client_apps.htm&type=5",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "PKCE, refresh token rotation, idle TTL and an IP allowlist are mandatory for apps used in more than two customer production orgs, with a May 11, 2026 deadline.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Under the PKCE control every authorization request must send code_challenge/code_verifier, and the User Agent flow is not allowed for AppExchange use.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "With idle TTL enabled, refresh tokens unused for 30 days expire and clients must handle invalid_grant.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Security review examines the packaged ECA configuration and every integration the app uses.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005318040&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "The authorization code flow requires packaging when the ISV controls callback URLs.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005318040&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "In most cases Connected Apps and ECAs must be packaged before security review submission.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Failing to implement the mandatory controls can lead to AppExchange de-listing or suspension of interoperation.",
+   "source_url": "https://partners.salesforce.com/pdx/s/pcnews/mandatory-security-updates-for-connected-apps-and-ecas-MCFBLDLDQ2TVDZFA22GLAMBVEZGY?language=en_US",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "A packaged app must pass AppExchange security review before it can be listed.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005318040&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "AppExchange listing requires a partner account, a Partner Business Org, a solution that passed security review, and a complete listing.",
+   "source_url": "https://appnigma.ai/blogs/salesforce-appexchange-listing-guide-2026/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Partner Community signup and the Partner Distribution Agreement cost nothing; the review fee is separate.",
+   "source_url": "https://appnigma.ai/blogs/salesforce-isv-partner-program-guide-2026/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Security review fee sources conflict: $999 per paid submission ($0 free) vs $2,700 per submission.",
+   "source_url": "https://appnigma.ai/blogs/salesforce-appexchange-security-review-fee-2026/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "$999 per submission attempt for paid solutions; free solutions don't pay but must still pass review.",
+   "source_url": "https://magicfuse.co/blog/how-to-pass-salesforce-appexchange-security-review",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Security testing takes 4-6 weeks after entering the queue, and resubmission adds several weeks.",
+   "source_url": "https://magicfuse.co/blog/how-to-pass-salesforce-appexchange-security-review",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "The default ECA refresh token policy is 'valid until revoked', and tokens can be revoked from the OAuth Connected Apps pages.",
+   "source_url": "https://help.salesforce.com/s/articleView?language=en_US&id=sf.connected_app_manage_oauth.htm&type=5",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Five active access grants are allowed per user per app; older grants are revoked.",
+   "source_url": "https://www.useparagon.com/integration-error-solutions/salesforce-invalid-grant-expired-access-refresh-token",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "With rotation enabled, reuse of an old token can revoke all of that user's refresh tokens and sessions for the ECA.",
+   "source_url": "https://developer.sailpoint.com/discuss/t/salesforce-eca-source-keeps-asking-to-re-authorize-in-isc-causes-and-fix/224590",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Refresh-token ECAs should include refresh_token or offline_access; missing them commonly causes expired-token errors.",
+   "source_url": "https://www.useparagon.com/integration-error-solutions/salesforce-invalid-grant-expired-access-refresh-token",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Salesforce recommends keeping OAuth scopes minimal.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "ECA setup examples use the api, refresh_token and offline_access scopes.",
+   "source_url": "https://sfplugin.com/docs/how-to/create-an-external-client-app-in-salesforce-step-by-step-guide/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "The OIDC discovery document lists scopes including api, refresh_token, offline_access, openid, full and id.",
+   "source_url": "https://login.salesforce.com/.well-known/openid-configuration",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "ECAs do not support the username-password OAuth flow.",
+   "source_url": "https://dev.to/dipojjal/external-client-apps-in-salesforce-spring-26-a-practical-migration-guide-37o0",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Creating an ECA requires permissions to create, edit and delete External Client Apps.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=ind.collections_create_configure_external_client_app.htm&language=en_US",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "The Developer Edition signup page returned HTTP 403 to the probe, so the free-account route could not be confirmed.",
+   "source_url": "https://developer.salesforce.com/signup",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "A team that wants a new Connected App must request it from Salesforce Support.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005228017&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Review submissions include a dev org with the package installed, a code scanner report, DAST reports and test credentials.",
+   "source_url": "https://appnigma.ai/blogs/salesforce-appexchange-listing-guide-2026/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "Common review failures include missing state parameters, weak redirect URI validation and insufficient token expiry.",
+   "source_url": "https://beaglesecurity.com/blog/article/pass-saledforce-appexchange-security-review.html",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "Listed apps are re-reviewed every 6 months to 2 years (reported by third parties).",
+   "source_url": "https://magicfuse.co/blog/how-to-pass-salesforce-appexchange-security-review",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Creating connected apps via the Metadata API is blocked the same way as in the UI.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=005228017&language=en_US&type=1",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "Canvas App exposure and push notifications are not yet supported on ECAs.",
+   "source_url": "https://www.apexcloudwave.com/blog/blog-march27-connected-apps-migration.html",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "The ECA consumer key and secret are shown under the OAuth settings section after creation.",
+   "source_url": "https://sfplugin.com/docs/how-to/create-an-external-client-app-in-salesforce-step-by-step-guide/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Does free Developer Edition signup still work? developer.salesforce.com returned 403 to the probes.",
+  "Can a solo developer create an ECA in a fresh Developer Edition without Salesforce Support approval?",
+  "Can a managed package containing a Packaged ECA be installed in other orgs (unlisted) without passing security review, or is review needed only for the AppExchange listing?",
+  "Which Salesforce scopes, if any, count as sensitive or restricted and trigger extra review?",
+  "Is Composio's managed Salesforce app reviewed, or capped on install counts?",
+  "What is the current security review fee: $999 or $2,700 per submission?",
+  "What is the official security review timeline? Only third-party estimates were found.",
+  "What are the ECA callback URL rules (HTTPS required, localhost allowed, how many URLs)?",
+  "Which Composio callback URL does your project use: api/v1/auth-apps/add or api/v3/toolkits/auth/callback?",
+  "What exactly do the PKCE and ECA requirements in the ISVForce guide (secure_code_ac_eca) say? That page was not fetched.",
+  "What are the full official AppExchange listing requirements (privacy policy, logo, publishing steps)?"
+ ],
+ "slug": "salesforce_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:19:30+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "1 of 13 steps have no retrieved source",
+   "1 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 62,
+  "probes_run": 4,
+  "research_seconds": 189,
+  "est_cost_usd": 0.3727,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0869,
+   "claude-opus-5-5": 0.2858
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 53183,
+    "out": 18736,
+    "cache_read": 564322,
+    "cache_write": 74933,
+    "search": 6
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 11309,
+    "cache_read": 0,
+    "cache_write": 11926,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

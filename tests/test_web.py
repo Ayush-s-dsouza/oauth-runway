@@ -83,3 +83,18 @@ def test_citation_numbers_match_the_sources_list(client):
     pos = {e["id"]: n for n, e in enumerate(g["evidence"], 1)}
     cites = re.findall(r'href="#ev-([^"]+)"[^>]*>(\d+)</a>', page)
     assert cites and all(pos[i] == int(n) for i, n in cites)
+
+
+def test_bundled_agent_samples_list_as_generated_not_curated(client, tmp_path, monkeypatch):
+    from app import store as st
+
+    sample_dir = tmp_path / "agent"
+    sample_dir.mkdir()
+    g = Guide(**draft().model_dump(), slug="zoomish",
+              provenance=Provenance(kind="agent", generated_at="2099-01-01T00:00:00+00:00", model="haiku -> opus"))
+    (sample_dir / "zoomish.json").write_text(g.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(st, "SAMPLES_DIR", sample_dir)
+    curated, generated = st.list_all()
+    assert "zoomish" in {x.slug for x in generated} and "zoomish" not in {x.slug for x in curated}
+    page = client.get("/g/zoomish")
+    assert page.status_code == 200 and "not been reviewed by a person" in page.text

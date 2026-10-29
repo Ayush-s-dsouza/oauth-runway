@@ -73,3 +73,12 @@ def test_slugify():
     assert slugify("https://www.notion.so/integrations") == "notion"
     assert slugify("Google Workspace (Gmail)") == "google-workspace-gmail"
     assert slugify("xero.com") == "xero"
+
+
+def test_unknown_finding_category_is_filed_as_other_but_evidence_stays_strict():
+    from app.schema import Finding
+
+    f = Finding(id="f1", category="rate_limit", claim="c", status="official_doc")
+    assert f.category == "other"
+    with pytest.raises(ValueError):
+        Finding(id="f2", category="scope", claim="c", status="made_up_status")

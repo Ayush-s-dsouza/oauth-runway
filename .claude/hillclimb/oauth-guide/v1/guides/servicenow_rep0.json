@@ -1,0 +1,696 @@
+{
+ "app": {
+  "name": "ServiceNow",
+  "website": "https://www.servicenow.com",
+  "developer_portal_url": "https://developer.servicenow.com/dev.do",
+  "oauth_docs_url": "https://docs.servicenow.com/bundle/newyork-platform-administration/page/administer/security/task/t_CreateEndpointforExternalClients.html",
+  "category": "ITSM / Enterprise service management"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "ServiceNow does not have one central OAuth app or review process. Each instance acts as its own authorization server, and an admin on that instance creates the OAuth client in System OAuth > Application Registry. You can get started without waiting for anyone, but every customer's instance admin has to create a client (or approve one) before that customer can connect. ServiceNow only reviews apps listed on the optional ServiceNow Store.",
+  "hands_on_effort": "30-60 min for your own instance, plus about 15 min of admin work in each customer instance",
+  "time_to_first_connection": "30-60 min (sign up for a free Personal Developer Instance, then register the client)",
+  "approval_wait": "none (optional ServiceNow Store certification is reported at 3-5 weeks)"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Personal Developer Instance (PDI)",
+   "unlocks": "You connect your own ServiceNow account through your own OAuth client, on a free PDI or on any instance where you have the admin role.",
+   "limits": [
+    "Access tokens last 30 minutes (1800 s) by default, so tokens are refreshed often",
+    "Refresh tokens expire after 100 days (8640000 s) by default, after which the user must re-authorize",
+    "Rate limits depend on the instance's Rate Limit Rules. Going over them returns HTTP 429"
+   ],
+   "time_to_reach": "30-60 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f2",
+    "f5",
+    "f7",
+    "f25"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Customer instance OAuth client (per instance)",
+   "unlocks": "Users on a specific customer's instance can connect once that instance's admin creates an OAuth client and gives you the Client ID and Client Secret.",
+   "limits": [
+    "An admin has to act in every customer instance. One client cannot be reused across instances",
+    "Each instance's admin controls scopes, token lifespans and rate limits",
+    "If the instance uses SSO, the login redirects to that instance's IdP"
+   ],
+   "time_to_reach": "About 15 min of admin work in each customer instance, plus however long it takes to coordinate with them",
+   "requires_review": false,
+   "evidence_ids": [
+    "f21",
+    "f2",
+    "f10",
+    "f12",
+    "f25"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production across any instance / ServiceNow Store (optional)",
+   "unlocks": "Any ServiceNow customer can connect once their admin registers a client. No ServiceNow approval is needed for OAuth access. Store certification only applies if you distribute a scoped app through the ServiceNow Store.",
+   "limits": [
+    "Store certification includes platform integration, implementation security, performance and license reviews",
+    "Store apps may need to be recertified for new releases or versions"
+   ],
+   "time_to_reach": "Immediate for OAuth access. Store certification is reported at 3-5 weeks",
+   "requires_review": false,
+   "evidence_ids": [
+    "f21",
+    "f22",
+    "f23",
+    "f24"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Create a ServiceNow developer account and request a PDI",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in at developer.servicenow.com (the site needs JavaScript) and click Request Instance. When it's ready, write down the instance URL (for example https://dev12345.service-now.com) and the admin credentials. The subdomain (dev12345) is what Composio uses.",
+   "url": "https://developer.servicenow.com/dev.do",
+   "values": [],
+   "est_time": "10-20 min",
+   "gotchas": [
+    "You need to sign in to request an instance. The PDI inactivity and reclaim rules were not verified."
+   ],
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f20"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create a Composio ServiceNow auth config and copy its callback URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create an auth config for the servicenow toolkit using the OAUTH2 scheme. Composio has no managed app for ServiceNow, so you have to supply your own client. Copy the callback URL it shows (the default is https://backend.composio.dev/api/v1/auth-apps/add).",
+   "url": null,
+   "values": [
+    {
+     "label": "Toolkit",
+     "value": "servicenow"
+    },
+    {
+     "label": "Auth scheme",
+     "value": "OAUTH2"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Open the Application Registry and start a new OAuth endpoint",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Log in to the instance as an admin and go to All > System OAuth > Application Registry, then click New. On releases before Zurich, choose 'Create an OAuth API endpoint for external clients'. On Zurich and later, choose New Inbound Integration Experience > New Integration, then pick the authorization code grant option.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "This requires the admin role.",
+    "The UI labels changed in Zurich. Use whichever path matches your release."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Fill in the endpoint form and save",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Enter a Name, leave Client Secret blank so it is generated for you, check Active, and paste the Composio callback into Redirect URL exactly as shown. You can keep the default Access Token Lifespan (1800 s) and Refresh Token Lifespan (8640000 s). Save the record, then copy the generated Client ID and Client Secret.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    },
+    {
+     "label": "Access Token Lifespan",
+     "value": "1800"
+    },
+    {
+     "label": "Refresh Token Lifespan",
+     "value": "8640000"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "If the URL doesn't match, authorization fails with 'Invalid Redirect_URI'.",
+    "It is unverified whether the field accepts multiple comma-separated URLs."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Enter credentials and instance subdomain in Composio",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Add the Client ID, Client Secret, instance subdomain and scope 'useraccount' to the Composio auth config. Composio then builds https://{subdomain}.service-now.com/oauth_auth.do and /oauth_token.do from the subdomain.",
+   "url": null,
+   "values": [
+    {
+     "label": "Scope",
+     "value": "useraccount"
+    },
+    {
+     "label": "Authorize URL",
+     "value": "https://{subdomain}.service-now.com/oauth_auth.do"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://{subdomain}.service-now.com/oauth_token.do"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection from Composio. You should land on oauth_auth.do with response_type=code, log in, approve access, and come back with a code that Composio exchanges at oauth_token.do. Then make a REST call to confirm the token works. OAuth only works with REST APIs, not SOAP.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f17"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Optionally narrow access with custom auth scopes",
+   "owner": "you",
+   "gate": 2,
+   "detail": "The 'useraccount' scope grants everything the user's roles allow. On Tokyo or later, an admin can create custom auth scopes and REST API Auth Scopes so the client can only reach specific REST APIs. If you do this, update the scope in Composio to match.",
+   "url": null,
+   "values": [],
+   "est_time": "15-30 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f14"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Have each customer's admin register a client in their instance",
+   "owner": "you",
+   "gate": 2,
+   "detail": "For every customer instance, send the admin the steps above (Application Registry > New, Redirect URL = the Composio callback) and ask them to send back the Client ID, Client Secret and subdomain. ServiceNow has no central approval. The client exists only in that instance.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min per instance",
+   "gotchas": [
+    "If the instance uses SSO, the login redirects to the customer's IdP."
+   ],
+   "evidence_ids": [
+    "f21",
+    "f2",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional) Set up client credentials for machine-to-machine access",
+   "owner": "you",
+   "gate": 2,
+   "detail": "If you want Composio's S2S_OAUTH2 mode instead of a per-user login, you need Washington DC or later. Set the system property glide.oauth.inbound.client.credential.grant_type.enabled=true (Global scope), create a dedicated integration user with the needed roles, and register a client-credentials client linked to that user as the OAuth Application User.",
+   "url": null,
+   "values": [],
+   "est_time": "20-30 min",
+   "gotchas": [
+    "Known error: the Client Credentials form lists only the first 1000 users alphabetically when you pick the OAuth Application User."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f15",
+    "f16",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Plan for token refresh and rate limits",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Refresh access tokens before they expire, based on expires_in (30 minutes by default). Prompt the user to re-authorize when the refresh token expires (100 days by default). Handle HTTP 429 responses, since each instance's Rate Limit Rules decide the limits.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f7",
+    "f8",
+    "f25",
+    "f26"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "(Optional) Submit a scoped app for ServiceNow Store certification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Only needed if you want to distribute a scoped app through the ServiceNow Store. Certification covers platform integration, implementation security, performance and license reviews. OAuth access does not require it.",
+   "url": null,
+   "values": [],
+   "est_time": "Days of preparation",
+   "gotchas": [],
+   "evidence_ids": [
+    "f22",
+    "f23"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Wait for Store certification",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "The certification team gives a timeline for each review. A third-party vendor reports 3-5 weeks from submission to approval. New versions may need to be recertified.",
+   "url": null,
+   "values": [],
+   "est_time": "3-5 weeks (reported)",
+   "gotchas": [],
+   "evidence_ids": [
+    "f23",
+    "f24"
+   ],
+   "support": "community"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Admin role on the ServiceNow instance",
+   "gate": 1,
+   "detail": "You need the admin role to create OAuth endpoints in System OAuth > Application Registry. A free PDI gives you admin access.",
+   "evidence_ids": [
+    "f2",
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Redirect URL that exactly matches the Composio callback",
+   "gate": 1,
+   "detail": "If it doesn't match, authorization fails with 'Invalid Redirect_URI'.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "A per-instance OAuth client for each customer",
+   "gate": 2,
+   "detail": "Each customer instance is its own authorization server, so its admin must create the client.",
+   "evidence_ids": [
+    "f21",
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Washington DC or later, plus a system property, for client credentials",
+   "gate": 2,
+   "detail": "Set glide.oauth.inbound.client.credential.grant_type.enabled=true and link an OAuth Application User.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "ServiceNow Store certification (only for Store listings)",
+   "gate": 3,
+   "detail": "Covers platform integration, implementation security, performance and license reviews.",
+   "evidence_ids": [
+    "f22",
+    "f23"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "useraccount",
+   "tier": "basic",
+   "effect": "This is the default and needs no review. It grants the full access of the authenticated user's roles, so the user's roles decide what the agent can do.",
+   "evidence_ids": [
+    "f12",
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Custom auth scopes / REST API Auth Scopes",
+   "tier": "unknown",
+   "effect": "An instance admin defines these (Tokyo and later) to limit the client to specific REST APIs. They are not a public catalog, so the names vary by instance and must be set in the Composio config to match.",
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f14"
+   ],
+   "support": "community"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Authorization fails with 'Invalid Redirect_URI'",
+   "cause": "The Redirect URL on the Application Registry record doesn't match the redirect_uri that Composio sends.",
+   "fix": "Paste the exact callback URL from your Composio auth config into the Redirect URL field and save.",
+   "contact": null,
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "No client credentials grant option in the Application Registry",
+   "cause": "The instance is older than Washington DC, or the inbound client credentials property is not enabled.",
+   "fix": "Set glide.oauth.inbound.client.credential.grant_type.enabled=true in Global scope on Washington DC or later, or use the authorization code flow instead.",
+   "contact": null,
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "The integration user doesn't appear in the OAuth Application User picker",
+   "cause": "Known error: the Client Credentials form in the New Inbound Integrations UI shows only the first 1000 users alphabetically.",
+   "fix": "See ServiceNow KB2624687 for the workaround, for example by naming the integration user so it sorts early.",
+   "contact": "https://support.servicenow.com/kb/kb?id=kb_article_view&sysparm_article=KB2624687",
+   "evidence_ids": [
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "HTTP 429 responses",
+   "cause": "The instance's Rate Limit Rules cap inbound REST requests per hour.",
+   "fix": "Back off and retry, and ask the instance admin to adjust the rate limit rule for the integration user.",
+   "contact": null,
+   "evidence_ids": [
+    "f25",
+    "f26"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Connections stop working after about 100 days",
+   "cause": "The refresh token expired (default lifespan 8640000 s).",
+   "fix": "Have the user re-authorize, or ask the admin to raise the Refresh Token Lifespan on the client.",
+   "contact": null,
+   "evidence_ids": [
+    "f7",
+    "f5"
+   ],
+   "support": "community"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "servicenow",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "useraccount"
+  ],
+  "note": "Composio has no managed OAuth app for ServiceNow because every customer instance is its own authorization server, so you always need your own client. For development, register one on a free PDI. For each customer, their instance admin creates a client in System OAuth > Application Registry with Composio's callback as the Redirect URL and shares the Client ID, Client Secret and subdomain. Composio also supports BASIC and S2S_OAUTH2 (client credentials) modes."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio's ServiceNow toolkit has no managed OAuth. Its auth modes are OAUTH2, BASIC and S2S_OAUTH2, with templated per-instance oauth_auth.do and oauth_token.do URLs, default scope useraccount, and redirect https://backend.composio.dev/api/v1/auth-apps/add.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/servicenow",
+   "quote": "\"managed_auth_schemes\": [], \"managed_oauth_available\": false",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "An admin creates the OAuth client via All > System OAuth > Application Registry > New > Create an OAuth API endpoint for external clients.",
+   "source_url": "https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1608526",
+   "quote": "Role required: admin\nNavigate to All > System OAuth > Application Registry and then click New.\nOn the interceptor page, click Create an OAuth API endpoint for external clients",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Older New York docs describe the same procedure for creating an endpoint for external clients.",
+   "source_url": "https://docs.servicenow.com/bundle/newyork-platform-administration/page/administer/security/task/t_CreateEndpointforExternalClients.html",
+   "quote": "Create an OAuth application endpoint for external client applications to access the ServiceNow instance.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "From Zurich on, the path is New Inbound Integration Experience > New Integration, then you choose a grant type. The Client ID and Secret are auto-generated.",
+   "source_url": "https://truto.one/blog/how-to-integrate-with-the-servicenow-api-2026-engineering-guide",
+   "quote": "Zurich and later:** Select **New Inbound Integration Experience > New Integration > OAuth - Client credentials grant**.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Endpoint form fields include Name, Client ID, Client Secret, Redirect URL, Active, Refresh Token Lifespan (8640000 s) and Access Token Lifespan (1800 s).",
+   "source_url": "https://www.servicenow.com/community/developer-forum/oauth-2-0-redirect-url/td-p/1616431",
+   "quote": "vi. Refresh Token Lifespan: 8640000 seconds  \nvii. Access Token Lifespan: 1800 seconds",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "A redirect_uri that doesn't match the registered one fails with 'Invalid Redirect_URI'.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/oauth-2-0-redirect-url/td-p/1616431",
+   "quote": "upon submission it is throwing with exception \"Invalid Redirect_URI\"",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "By default, refresh tokens expire after 100 days and access tokens after 30 minutes.",
+   "source_url": "https://help.webexconnect.io/docs/servicenow-node",
+   "quote": "By default, refresh tokens expire in 100 days (8640000 seconds)..",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Integrations should refresh tokens frequently because of the 30-minute expiry.",
+   "source_url": "https://truto.one/blog/how-to-integrate-with-the-servicenow-api-2026-engineering-guide",
+   "quote": "With a 30-minute token expiry, your integration will need to refresh tokens frequently.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "The auth code flow starts at oauth_auth.do with response_type=code and exchanges the code at oauth_token.do.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/oauth-grant-type-code/m-p/2090042",
+   "quote": "https://<your-instance>.service-now.com/oauth_auth.do?response_type=code&client_id=<your_client_id>&",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "The auth code grant supports confidential clients and PKCE public clients, and redirects to the configured IdP when SSO is enabled.",
+   "source_url": "https://www.servicenow.com/community/platform-privacy-security-blog/choose-the-right-oauth-grant-type-for-servicenow-integration/ba-p/3385352",
+   "quote": "It supports both confidential clients (with a client secret) and public clients (using PKCE).",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Scopes are defined per instance. The default 'useraccount' gives the full access of the user's roles, and admins can create custom scopes.",
+   "source_url": "https://www.servicenow.com/community/platform-privacy-security/oauth-scopes-in-servicenow-integrations-the-silent-security-hero/ta-p/3456437",
+   "quote": "the default scope might be \"useraccount,\" but you can create custom ones for granular c",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "From Tokyo onward, admins can configure their own auth scopes.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/servicenow-oauth-scopes/m-p/2654068",
+   "quote": "It seems from Tokyo onwards; you can configure your own auth scopes.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "REST API Auth Scopes limit an OAuth client to specific REST APIs.",
+   "source_url": "https://www.servicenow.com/community/platform-privacy-security-blog/restrict-access-available-to-oauth-client-using-rest-api-auth/ba-p/2524938",
+   "quote": "ServiceNow platform supports authentication scopes to allow admins to limit access of an OAuth client application to a specific REST API.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Inbound client credentials require Washington DC or later, the system property glide.oauth.inbound.client.credential.grant_type.enabled=true, and an OAuth Application User.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/client-credential-grant-oauth-missing-grant-type-options/td-p/3145700",
+   "quote": "starting from the Washington release, ServiceNow has introduced an option to support the \"Client Credentials\" grant type",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Client credentials setup involves enabling the property, provisioning an integration user, and registering the client.",
+   "source_url": "https://truto.one/blog/how-to-integrate-with-the-servicenow-api-2026-engineering-guide",
+   "quote": "you must enable the inbound OAuth 2.0 Client Credentials grant type globally, provision a dedicated Internal Integration User, configure an OAuth application registr",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Inbound OAuth applies only to REST APIs, not SOAP.",
+   "source_url": "https://www.servicenow.com/community/developer-blog/oauth-2-0-with-inbound-rest/ba-p/2278926",
+   "quote": "OAuth based authentication is supported only for REST API Endpoints in ServiceNow and not for SOAP APIs.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "A free PDI with admin access is available from developer.servicenow.com via Request Instance.",
+   "source_url": "https://www.servicenow.com/community/training-and-certifications/how-do-i-get-started-building-on-servicenow-servicenow/ta-p/3444145",
+   "quote": "Just head over to developer.servicenow.com, create a free account, and click Request Instance.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "A PDI provides an instance URL like https://dev12345.service-now.com and admin credentials.",
+   "source_url": "https://www.reco.ai/hub/servicenow-developer-instance-setup-management",
+   "quote": "Instance URL: Navigate to the instance URL provided (e.g., https://dev12345.service-now.com).",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "The developer portal needs JavaScript, and you must sign in to request an instance.",
+   "source_url": "https://developer.servicenow.com/dev.do",
+   "quote": "ServiceNow Developers Site is dynamic and depends on JavaScript to function.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "ServiceNow has no central OAuth app review. Clients are created by an admin in each instance.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "ServiceNow Store certification covers platform integration, implementation security, performance and license reviews, and applies only to Store distribution.",
+   "source_url": "https://www.servicenow.com/community/s/cgfwn76974/attachments/cgfwn76974/creatorcon-blog/136/1/CCB1395_Sharma_ServiceNow_Knowledge_19_final_presentation.pdf",
+   "quote": "Implementation Security Review. Performance Review. License Review.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "All Store apps are certified before publication and may need recertification.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/recertifying-your-app-with-code-changes/ba-p/2477671",
+   "quote": "All applications on the ServiceNow Store undergo a certification process before publication.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "A vendor reports Store certification typically takes 3-5 weeks.",
+   "source_url": "https://xpertappdev.com/services/process.html",
+   "quote": "ServiceNow’s certification review typically takes 3–5 weeks from submission to approval.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Each instance configures its own rate limits, and exceeding them returns HTTP 429.",
+   "source_url": "https://getknit.dev/blog/servicenow-rest-api-integration-guide/",
+   "quote": "ServiceNow rate limits are **instance-configured**, not globally fixed",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Rate Limit Rules cap inbound REST requests per hour.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/limit-number-of-requests-external-rest-api/m-p/3151520",
+   "quote": "Rate Limit Rules in ServiceNow allow you to set rules that limit the number of inbound REST API requests processed per hour.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Known error: the Client Credentials form shows only the first 1000 users alphabetically.",
+   "source_url": "https://support.servicenow.com/kb/kb?id=kb_article_view&sysparm_article=KB2624687",
+   "quote": "Only the first 1000 users alphabetically on a SeviceNow Instance show on the Client Credentials form",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "I couldn't fetch the current official docs for Zurich/Yokohama because they render with JavaScript. The form field labels come from community posts and may differ on newer releases.",
+  "It's unclear whether the Redirect URL field accepts multiple comma-separated URLs, and whether matching is exact or by prefix.",
+  "I couldn't confirm how PKCE is enabled on the registry record, or which release added it.",
+  "PDI terms (reclaim after inactivity, release upgrades) were not verified.",
+  "The live oauth_auth.do and OIDC discovery endpoints were not probed.",
+  "It's unconfirmed whether the 'useraccount' scope must be explicitly attached to the OAuth entity profile in newer releases for the authorization code flow to work with Composio."
+ ],
+ "slug": "servicenow_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T05:11:04+00:00",
+  "model": "claude-opus-5-5 -> claude-opus-5-5",
+  "research_model": "claude-opus-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 99,
+  "probes_run": 3,
+  "research_seconds": 212,
+  "est_cost_usd": 0.7974,
+  "cost_breakdown": {
+   "claude-opus-5-5": 0.7974
+  },
+  "usage": {
+   "claude-opus-5-5": {
+    "in": 34,
+    "out": 19178,
+    "cache_read": 298859,
+    "cache_write": 44795,
+    "search": 13
+   }
+  },
+  "served_models": [
+   "claude-opus-5-5"
+  ]
+ }
+}

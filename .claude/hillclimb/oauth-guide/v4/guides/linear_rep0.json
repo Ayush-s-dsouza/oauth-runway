@@ -1,0 +1,832 @@
+{
+ "app": {
+  "name": "Linear OAuth app (for Composio)",
+  "website": "https://linear.app",
+  "developer_portal_url": "https://linear.app/settings/api/applications/new",
+  "oauth_docs_url": "https://linear.app/developers/oauth-2-0-authentication",
+  "category": "Project management / issue tracker"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "Creating and connecting your own Linear OAuth app takes minutes, and no formal review is documented for private or public installs. The main friction is that you must be a workspace admin, and the only documented review path (Integration Directory listing) is curated and has no published timeline.",
+  "hands_on_effort": "30-60 min for Gate 1 and 2; plus a few hours to prepare directory assets if you list publicly",
+  "time_to_first_connection": "15-20 min once you are a workspace admin and have the Composio callback URL",
+  "approval_wait": "None documented for private or public installs. Directory listing: no timeline published."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Private app in your own workspace",
+   "unlocks": "You create the OAuth app, paste Composio's callback URL, and connect your own Linear account. Distribution stays private, so only your creating workspace can use it.",
+   "limits": [
+    "You must be a workspace admin to create the app (community source).",
+    "Baseline OAuth app rate limit: 5,000 requests per user per hour, plus 2,000,000 complexity points per hour.",
+    "Access tokens expire after 24 hours and must be refreshed."
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "e0",
+    "f1",
+    "f2",
+    "f5",
+    "f6",
+    "f14",
+    "f24"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Workspace-wide use (teammates in the creating workspace)",
+   "unlocks": "Admins of the dedicated workspace can manage the app and use it. Linear documents no separate test-user allowlist or dev store; the private install scope is the workspace itself.",
+   "limits": [
+    "Every admin of the dedicated workspace gets access to the OAuth app, so use a dedicated workspace.",
+    "Higher temporary rate limits can be requested from Linear support, reviewed case by case.",
+    "Refresh tokens rotate; each refresh returns a new refresh token with a 30-minute grace period for replaying a lost response."
+   ],
+   "time_to_reach": "Same day as Gate 1",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f15",
+    "f16",
+    "f18",
+    "f26",
+    "f27"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public install (other workspaces) and optional Integration Directory listing",
+   "unlocks": "Setting Distribution to Public lets other Linear workspaces install the app. A directory listing is a separate, optional step that Linear reviews before publishing.",
+   "limits": [
+    "Linear's directory generally does not accept scripts, low-effort or vibe-coded apps, or hobbyist apps, and prefers formal companies.",
+    "Directory submission needs a 320x320 color icon and 1-3 showcase images at 1600x1000.",
+    "No minimum install count, security assessment, or privacy policy requirement is listed on the directory page.",
+    "Public install itself: no documented review found. Requires_review applies to the directory listing."
+   ],
+   "time_to_reach": "Public toggle: minutes. Directory listing: no published timeline.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f5",
+    "f20",
+    "f21",
+    "f22",
+    "f23",
+    "f25",
+    "f35"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide managed auth vs. your own Linear app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Composio offers managed OAuth for Linear, so you can prototype without your own app. Register your own app when you want your app name on Linear's consent screen, a public directory listing, or your own rate-limit and webhook setup.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Composio-brokered flows use Composio's redirect URI, so check it against your own app config before registering."
+   ],
+   "evidence_ids": [
+    "e0",
+    "f32"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Create or choose a dedicated Linear workspace for the app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Create a separate Linear workspace used only to manage the OAuth app. Every admin of that workspace gets access to the app, so keep the admin list short.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "You must be a workspace admin of that workspace to create the app (community source)."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Open the OAuth application form",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the dedicated workspace, go to Settings > API (linear.app/settings/api) and open the new application form at linear.app/settings/api/applications/new. You can also pre-fill fields with URL parameters or a JSON manifest.",
+   "url": "https://linear.app/settings/api/applications/new",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Fill in name, developer and distribution",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Enter a Developer name (2-80 characters) and a Client name (2-80 characters). The client name must not contain the word Linear or any http(s) URL. Leave Distribution set to Private for Gate 1.",
+   "url": null,
+   "values": [
+    {
+     "label": "Distribution",
+     "value": "Private (for Gate 1)"
+    },
+    {
+     "label": "Client name rules",
+     "value": "2-80 chars, no 'Linear', no URL"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f4",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set the Redirect URI to Composio's callback",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Add the redirect callback URL to the application's redirect URI field. Use the exact URL from your Composio auth config, and paste it as an absolute HTTPS URL. You can register up to 32 unique redirect URIs.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Composio's default redirect differs between two endpoints in the research; confirm the value your Composio project shows before saving."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f32",
+    "e0"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Enable client credentials only if you need server-to-server tokens",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Leave client credentials off unless you need app-level tokens. If you need them, turn on client credentials tokens when creating or editing the app. These tokens are valid 30 days and act as an app actor with access to public teams.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save the app and copy the client ID and secret into Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Save the application, then copy the Client ID and Client Secret into your Composio auth config for Linear. If the secret is ever exposed, you can generate a new one from app settings without re-registering. Rotating it invalidates any client-credentials tokens.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorize URL",
+     "value": "https://linear.app/oauth/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://api.linear.app/oauth/token"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f18",
+    "f13",
+    "f31"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Connect your own account with default scopes",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, start the Linear connection using your own app credentials. The default scopes are read, write, issues:create and comments:create. Do not add admin unless the use case truly needs it.",
+   "url": null,
+   "values": [
+    {
+     "label": "Scopes",
+     "value": "read, write, issues:create, comments:create"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "admin gives full access to admin-level endpoints; Linear says to request it only when absolutely needed."
+   ],
+   "evidence_ids": [
+    "f10",
+    "f32",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Optionally act as the app rather than the user",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "If issues and comments should show the app as the author, add actor=app to the authorize URL. The default is the user as actor. The setting is tied to that authorization's token.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Verify token refresh and rate-limit handling",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Confirm your Composio setup refreshes access tokens, since they expire after 24 hours. Refresh requests can authenticate with HTTP basic auth or with client_id and client_secret; PKCE-issued tokens need only client_id. Handle HTTP 429 responses with the Retry-After header.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [
+    "Community guides describe rolling refresh tokens beyond the documented 30-minute grace period; verify behavior in your own tests."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f15",
+    "f16",
+    "f27",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Request higher rate limits if the workspace needs them",
+   "owner": "you",
+   "gate": 2,
+   "detail": "If the baseline 5,000 requests per user per hour is not enough, contact Linear support to request temporary higher limits. Workspace-level apps using actor authorization get limits that scale with paid users.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f26",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Switch to Public distribution for other workspaces",
+   "owner": "you",
+   "gate": 3,
+   "detail": "To let other workspaces install the app, change Distribution from Private to Public in the app settings. No review is documented for this switch. Test the install from a second workspace before sharing it.",
+   "url": null,
+   "values": [
+    {
+     "label": "Distribution",
+     "value": "Public (for Gate 3)"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Only switch to Public if you are ready for other workspaces to install it."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Draft directory listing copy and check the Linear directory fit",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Draft the listing description, a privacy policy statement if you have one, and an icon brief. Check that your app is a formal company product, since Linear generally does not accept hobbyist or low-effort apps. Linear does not list a privacy policy requirement, so check your own legal needs.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f20",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare icon and showcase assets and submit the directory form",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Create a 320x320 color icon in SVG, JPEG or PNG, plus 1-3 showcase images at 1600x1000. Submit the Google form linked from the Integration Directory page, then send assets to Linear's integrations address.",
+   "url": "https://linear.app/developers/integration-directory",
+   "values": [
+    {
+     "label": "Icon",
+     "value": "320x320 px, .svg/.jpeg/.png"
+    },
+    {
+     "label": "Showcase",
+     "value": "1-3 images, 1600x1000"
+    }
+   ],
+   "est_time": "2-4 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f21",
+    "f22"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for directory review and handle updates by email",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Linear has not published a review timeline for directory submissions. Listing changes and delisting are requested by emailing the integrations address.",
+   "url": null,
+   "values": [],
+   "est_time": "Unknown",
+   "gotchas": [
+    "No review timeline is stated on the directory page; plan for an open-ended wait."
+   ],
+   "evidence_ids": [
+    "f22"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Workspace admin role",
+   "gate": 1,
+   "detail": "You must be a workspace admin to create and manage OAuth apps in Linear.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "Dedicated management workspace",
+   "gate": 1,
+   "detail": "Linear recommends a separate workspace for the OAuth app because all its admins get access.",
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Client name rules",
+   "gate": 1,
+   "detail": "2-80 characters, must not contain the word Linear or an http(s) URL. Developer name 2-80 characters, required.",
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Redirect URI format and matching",
+   "gate": 1,
+   "detail": "Absolute HTTP or HTTPS URL, 1-32 unique values. The redirect_uri in the token exchange must match the authorize step.",
+   "evidence_ids": [
+    "f9",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Scope caution for admin",
+   "gate": 1,
+   "detail": "Request admin only when absolutely needed. It grants full access to admin-level endpoints.",
+   "evidence_ids": [
+    "f10",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "PKCE and state",
+   "gate": 1,
+   "detail": "State is optional but recommended. PKCE is supported with code_challenge and code_challenge_method (plain or S256).",
+   "evidence_ids": [
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Directory icon and showcase assets",
+   "gate": 3,
+   "detail": "320x320 color icon and 1-3 showcase images at 1600x1000 for directory submission.",
+   "evidence_ids": [
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Directory eligibility",
+   "gate": 3,
+   "detail": "Linear generally does not accept scripts, low-effort or vibe-coded apps, or hobbyist apps.",
+   "evidence_ids": [
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "No security assessment or minimum installs documented",
+   "gate": 3,
+   "detail": "The directory page lists no minimum install threshold, security assessment, or privacy policy requirement.",
+   "evidence_ids": [
+    "f23"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "read",
+   "tier": "unknown",
+   "effect": "Default scope. Linear's docs do not assign it a tier or extra review; it is always present.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "write",
+   "tier": "unknown",
+   "effect": "Default scope from Composio. No extra review documented.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "issues:create",
+   "tier": "unknown",
+   "effect": "Default scope from Composio. No extra review documented.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "comments:create",
+   "tier": "unknown",
+   "effect": "Default scope from Composio. No extra review documented.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "timeSchedule:write",
+   "tier": "unknown",
+   "effect": "Listed in the docs. Request only if the use case needs it; no extra review documented.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "admin",
+   "tier": "unknown",
+   "effect": "Full access to admin-level endpoints. Linear says never request it unless absolutely needed. It is the only scope the docs flag as high-privilege; no separate review is documented.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "app:assignable / app:mentionable",
+   "tier": "unknown",
+   "effect": "Agent-specific scopes documented on Linear's agents page, not the OAuth page. Check that page if your agent needs assignment or mention behavior.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "You cannot create an OAuth application in Linear settings.",
+   "cause": "Only workspace admins can create and manage OAuth apps.",
+   "fix": "Ask a workspace admin to create the app, or get admin role in your dedicated workspace.",
+   "contact": null,
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Token exchange fails after the Linear consent screen.",
+   "cause": "The redirect_uri in the token request does not match the one used in the authorize step, or it is not the registered callback.",
+   "fix": "Use the exact Composio callback URL in both the Linear app's redirect field and the authorize/token calls.",
+   "contact": null,
+   "evidence_ids": [
+    "f8",
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Linear directory submission is not accepted.",
+   "cause": "Linear generally does not accept scripts, low-effort or vibe-coded apps, or hobbyist apps.",
+   "fix": "Stay on Public or Private distribution without a directory listing, or submit only if the app is a formal company product.",
+   "contact": "integrations@linear.app",
+   "evidence_ids": [
+    "f20",
+    "f22"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "linear",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "read",
+   "write",
+   "issues:create",
+   "comments:create"
+  ],
+  "note": "Start on Composio's managed OAuth for prototyping or internal use. Register your own Linear OAuth app when you want your app name on the consent screen, a public Integration Directory listing, or your own rate-limit and webhook setup. Composio's redirect URI must be pasted into your Linear app's redirect field, and the research found two candidate Composio redirect endpoints, so confirm which one your project shows."
+ },
+ "evidence": [
+  {
+   "id": "e0",
+   "claim": "Composio reports managed OAuth2 for Linear (also an API_KEY mode) and lists default scopes read, write, issues:create, comments:create.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/linear",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f1",
+   "claim": "Linear's OAuth app is created at the OAuth2 application creation page in Linear settings; the docs say to configure redirect callback URLs.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "Create a new OAuth2 Application and configure the redirect callback URLs to your application.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "The docs recommend creating a dedicated workspace to manage the OAuth app, because every admin of that workspace gets access.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "It is highly recommended you create a workspace for the purpose of managing the OAuth2 Application",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "The app creation page can be pre-filled with URL parameters or a JSON manifest, including distribution, developer name, client name, client URI and redirect URIs.",
+   "source_url": "https://linear.app/developers/oauth-app-manifests",
+   "quote": "Create a pre-populated OAuth application by adding allowed URL parameters",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Client name must be 2 to 80 characters and must not contain the word Linear or an http(s) URL; developer name is required (2 to 80 characters).",
+   "source_url": "https://linear.app/developers/oauth-app-manifests",
+   "quote": "Must not contain `Linear`",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Distribution defaults to private, available only in the creating workspace; setting it to public lets other workspaces install it.",
+   "source_url": "https://linear.app/developers/oauth-app-manifests",
+   "quote": "Whether the app should be available only in the current workspace or installable by other workspaces.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Creating an OAuth app in Linear requires being a workspace admin, according to third-party integration docs.",
+   "source_url": "https://clerk.com/docs/authentication/social-connections/linear",
+   "quote": "You must be a workspace admin to create and manage OAuth apps in Linear.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Linear's OAuth flow accepts state (optional but recommended) and PKCE via code_challenge and code_challenge_method (plain or S256).",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "Linear supports the PKCE flow",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The redirect_uri sent in the token exchange must match the one used in the authorize step.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "Same redirect URI which you used in the previous step",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Manifest redirect URIs must be absolute HTTP or HTTPS URLs, with 1 to 32 unique values.",
+   "source_url": "https://linear.app/developers/oauth-app-manifests",
+   "quote": "Format: absolute HTTP or HTTPS URL",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Scopes are sent comma-separated: read (always present), write, issues:create, comments:create, timeSchedule:write, and admin. Admin should be requested only when absolutely needed.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "You should never ask for this permission unless it’s absolutely needed",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Linear's OAuth docs do not describe a sensitive or restricted scope tier or separate security review; the only scope caution documented is for admin.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "admin - Full access to admin level endpoints.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Token exchange POSTs form-encoded code, redirect_uri, client_id, client_secret and grant_type=authorization_code to the token endpoint; PKCE exchanges can omit client_secret.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "Pass parameters in body as URL-encoded form submission",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Access tokens are valid for 24 hours and come with a refresh token; each refresh returns a new refresh token, with a 30-minute grace period for replaying a lost response.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "The access token is valid for 24 hours and will need to be refreshed when it expires.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "All OAuth2 apps were migrated to the new refresh-token system on April 1, 2026.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "All OAuth2 applications were migrated to the new refresh token system on April 1, 2026.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Refresh requests can use HTTP basic auth or client_id and client_secret parameters; PKCE-generated tokens only need client_id.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "If your access token was generated using PKCE, you can simply pass client_id as a parameter.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Client credentials (server-to-server app tokens, valid 30 days) must be enabled on the OAuth app when created or edited; the token acts as an app actor with access to public teams.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "You must first toggle on client credentials tokens for your OAuth2 app when creating or editing the app in Linear",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "The client secret can be rotated from app settings without re-registering the app; rotating it invalidates client-credentials tokens.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "you can generate a new client secret or webhook signing secret without re-registering your application.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Actor authorization (actor=app) makes the app the actor for created issues and comments; it is set on the authorize URL and tied to that token. Default is user actor.",
+   "source_url": "https://linear.app/developers/oauth-actor-authorization",
+   "quote": "add actor=app parameter to your OAuth authorization URL",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Linear's Integration Directory generally does not accept scripts, low-effort or vibe-coded apps, or hobbyist apps, and prefers formal companies.",
+   "source_url": "https://linear.app/developers/integration-directory",
+   "quote": "We generally do not accept scripts, low-effort/vibe coded or apps built by hobbyists",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Directory submission uses a Google form plus icon and showcase assets; the docs list a 320x320 color icon and 1-3 showcase images at 1600x1000.",
+   "source_url": "https://linear.app/developers/integration-directory",
+   "quote": "Color icon 320px by 320px in .svg, .jpeg, or .png file format",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Listing changes or delisting are requested by emailing Linear's integrations address; no review timeline is stated on the directory page.",
+   "source_url": "https://linear.app/developers/integration-directory",
+   "quote": "you can contact integrations@linear.app with the updates required.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "The directory page lists no minimum-install threshold, security assessment, or privacy-policy requirement.",
+   "source_url": "https://linear.app/developers/integration-directory",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "The baseline rate limit for OAuth apps is 5,000 requests per user (or app user) per hour, plus 2,000,000 complexity points per hour.",
+   "source_url": "https://linear.app/developers/rate-limiting",
+   "quote": "OAuth App | 5,000 | User (or App User) | 1 hour",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Rate limits for workspace-level OAuth apps using actor authorization increase dynamically based on paid users in that workspace.",
+   "source_url": "https://linear.app/developers/rate-limiting",
+   "quote": "We dynamically increase rate limits for workspace level OAuth apps using Actor Authorization",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Developers can ask Linear support for temporary higher rate limits, reviewed case by case.",
+   "source_url": "https://linear.app/developers/rate-limiting",
+   "quote": "you can request them by contacting Linear support",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Rate-limited requests return HTTP 429 with a RATELIMITED error code and a Retry-After header.",
+   "source_url": "https://linear.app/developers/rate-limiting",
+   "quote": "GraphQL requests that exceed a rate limit return HTTP status code 429.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "The token endpoint is https://api.linear.app/oauth/token and the authorize endpoint is https://linear.app/oauth/authorize.",
+   "source_url": "https://linear.app/developers/oauth-2-0-authentication",
+   "quote": "POST https://api.linear.app/oauth/token HTTP/1.1",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Composio's toolkit record lists the same authorize and token URLs as Linear, a default redirect URI, and default scopes read, write, issues:create and comments:create.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/linear",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "A community guide says to turn on the Public option so all Linear workspaces can authorize the app, matching the distribution setting in Linear's manifest docs.",
+   "source_url": "https://nocodb.com/docs/product/sync/app-sync/on-premise-oauth/linear",
+   "quote": "Enable “Public”: Turn ON to let all Linear workspaces authorize",
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No documented formal OAuth app review, verification, or security assessment for public (non-directory) Linear apps was found. Confirm in Linear's console before announcing a public install.",
+  "No review timeline for Integration Directory submissions was published.",
+  "No documented minimum install count, privacy policy, domain verification, or demo video requirements.",
+  "Unclear whether a paid Linear plan is needed to create OAuth apps; the only support is a community guide about a free trial.",
+  "No list of restricted or sensitive scopes was found; admin is the only scope the docs flag as high-privilege.",
+  "Refresh-token rotation beyond the 30-minute replay grace period is not confirmed by Linear's page; community guides describe rolling refresh tokens.",
+  "Composio's default redirect URI differs between the toolkit record (backend.composio.dev) and the callback path seen in research. Confirm which one your Composio project shows before pasting it into Linear.",
+  "No separate rate limit for unreviewed or unlisted apps was documented; the OAuth-app baseline applies.",
+  "The authorize endpoint returned a login-style page rather than an OAuth error for an invalid client_id, so how Linear rejects unknown clients is not confirmed."
+ ],
+ "slug": "linear_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:47:38+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 18,
+  "probes_run": 3,
+  "research_seconds": 110,
+  "est_cost_usd": 0.0336,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0336
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 18,
+    "out": 26563,
+    "cache_read": 164393,
+    "cache_write": 76211,
+    "search": 1
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

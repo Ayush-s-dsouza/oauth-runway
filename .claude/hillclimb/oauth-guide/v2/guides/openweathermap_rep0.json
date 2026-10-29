@@ -1,0 +1,485 @@
+{
+ "app": {
+  "name": "OpenWeatherMap",
+  "website": "https://openweathermap.org/api",
+  "developer_portal_url": "https://home.openweathermap.org/users/sign_up",
+  "oauth_docs_url": null,
+  "category": "Weather data API"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "OpenWeatherMap does not use OAuth. Access is a personal API key issued to a free account, so there is no OAuth app to register, no redirect URI, no scopes, and no review step found. The only real wait is key activation, which can take up to two hours.",
+  "hands_on_effort": "15-30 min",
+  "time_to_first_connection": "Minutes after signup, plus up to 2 hours for the key to activate",
+  "approval_wait": "none found"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Personal free account with API key",
+   "unlocks": "Calls to OpenWeatherMap endpoints using your own personal API key, for your own account.",
+   "limits": [
+    "The key is issued only after the account exists and its email address is verified.",
+    "Early 401 'Invalid API key' errors right after signup are reported as expected while the key activates (community source)."
+   ],
+   "time_to_reach": "Minutes after signup; the key may take up to 2 hours to activate.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f5",
+    "f6",
+    "f13"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "No OAuth test-user or invite tier found",
+   "unlocks": "Nothing separate was found. The same personal API key works for your own calls once active; there is no allowlist or dev-store concept identified for OpenWeatherMap.",
+   "limits": [
+    "Some data availability, such as historical data, depends on the subscription plan (community source). Exact tiers and call limits were not verified."
+   ],
+   "time_to_reach": "Not applicable",
+   "requires_review": false,
+   "evidence_ids": [
+    "f8",
+    "f9",
+    "f14"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "No OAuth marketplace or app review found",
+   "unlocks": "No OAuth app-level public release path was found. Public use of an API key does not appear to need an app review.",
+   "limits": [
+    "No OAuth authorization endpoint or OpenID discovery document was found on the provider domain, so no OAuth app review process was identified.",
+    "This is a negative finding from probes and documentation, not a confirmed provider policy."
+   ],
+   "time_to_reach": "Not applicable",
+   "requires_review": false,
+   "evidence_ids": [
+    "f1",
+    "f8",
+    "f9",
+    "f12"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Confirm you need an API key, not OAuth",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Check your integration against the provider's docs before setting anything up. OpenWeatherMap's stated mechanism is an API key sent with each call, and its Weather Maps 2.0 docs say the endpoint needs only API key authentication. If you were expecting an OAuth consent screen, you will not find one here.",
+   "url": "https://openweathermap.org/api/weathermaps",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Do not plan an OAuth app, redirect URI, PKCE, or refresh-token flow for this provider unless OpenWeatherMap publishes one."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f10",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a free account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the sign-up page and register with an email address. Use the free sign-up path, not a paid plan.",
+   "url": "https://home.openweathermap.org/users/sign_up",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f6",
+    "f7"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Verify your email address",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Click the verification link sent to your email. The API key is issued only after the account exists and the email is verified.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "If no key appears, check that the email was verified before assuming a fault."
+   ],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy your API key",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in and open the API keys page. Copy the default key shown there. You can create additional keys on the same page if you want one key per environment.",
+   "url": "https://home.openweathermap.org/api_keys",
+   "values": [
+    {
+     "label": "Page",
+     "value": "API keys page on home.openweathermap.org (sign in first)"
+    }
+   ],
+   "est_time": "2 min",
+   "gotchas": [
+    "The API keys page redirects unauthenticated visitors to a sign-in page, so sign in first."
+   ],
+   "evidence_ids": [
+    "f3",
+    "f7"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Wait for activation before testing",
+   "owner": "provider_wait",
+   "gate": 1,
+   "detail": "The key activates automatically, up to 2 hours after registration. A 401 'Invalid API key' error in this window is expected, so do not rotate keys or change code yet.",
+   "url": null,
+   "values": [],
+   "est_time": "up to 2 hours",
+   "gotchas": [
+    "Keep retrying after activation. If the error persists beyond 2 hours, contact OpenWeatherMap support."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Store the key as a secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Put the key in your secrets manager or environment variables. Do not commit it to source control or put it in client-side code.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Send the key with each request",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Add the key to every request. Most endpoints take it as the appid query parameter. Some newer endpoints accept the X-Api-Key header instead. Use one method consistently per endpoint.",
+   "url": "https://openweathermap.org/api/one-call-3",
+   "values": [
+    {
+     "label": "Query parameter",
+     "value": "appid=<your API key>"
+    },
+    {
+     "label": "Header (some newer endpoints)",
+     "value": "X-Api-Key: <your API key>"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "The header form is reported by a third-party guide, not the official FAQ. Check the endpoint's own docs if a call fails."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f10",
+    "f11",
+    "f15"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Run a test call against a documented endpoint",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Call one endpoint from the public One Call 3.0 docs with your key and confirm a 200 response with weather data. The docs are readable without signing in, so you can check parameters first.",
+   "url": "https://openweathermap.org/api/one-call-3",
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Some data (e.g. historical) may be blocked by your plan. A plan-related error is a plan issue, not an auth issue."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f15"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Check plan coverage for the data you need",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Before building on the key, confirm in the pricing page that your plan covers each endpoint and call volume you need. Exact tiers and limits were not verified in this research.",
+   "url": "https://openweathermap.org/api",
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Subscription plan affects data availability (community source)."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f6"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Ask support whether any OAuth program exists",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Only if your product truly needs per-user OAuth consent, email OpenWeatherMap support and ask whether a partner or OAuth program exists. Nothing in the research found one, so do not wait on this for a key-based build.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "A reply confirming no OAuth program is the expected outcome."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f8",
+    "f9"
+   ],
+   "support": "verified"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Verified email address on the OpenWeatherMap account",
+   "gate": 1,
+   "detail": "Required before the personal API key is issued.",
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Personal API key sent with every request",
+   "gate": 1,
+   "detail": "Sent as appid query parameter or X-Api-Key header depending on the endpoint.",
+   "evidence_ids": [
+    "f4",
+    "f10",
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Plan that covers the required endpoints and data",
+   "gate": 2,
+   "detail": "Some data depends on subscription plan. Exact tiers not verified.",
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [],
+ "blockers": [
+  {
+   "symptom": "No OAuth app, client ID, or redirect URI option appears anywhere in the developer account.",
+   "cause": "OpenWeatherMap authenticates with an API key. It does not run an OAuth authorization flow.",
+   "fix": "Skip OAuth setup. Create a free account, verify email, and use the API key on the API keys page.",
+   "contact": null,
+   "evidence_ids": [
+    "f4",
+    "f8",
+    "f9",
+    "f12"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "Composio lookup for 'openweathermap' returns no toolkit, so there is no managed OAuth connection.",
+   "cause": "Composio has no OpenWeatherMap toolkit, and the provider has no OAuth flow to wrap.",
+   "fix": "Connect with a direct API key in your agent configuration.",
+   "contact": null,
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "401 'Invalid API key' right after signup.",
+   "cause": "New keys take up to 2 hours to activate.",
+   "fix": "Wait and retry. If it persists beyond 2 hours, contact OpenWeatherMap support.",
+   "contact": "OpenWeatherMap support via the account site",
+   "evidence_ids": [
+    "f5",
+    "f13"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": null,
+  "managed_oauth_available": false,
+  "default_scopes": [],
+  "note": "There is no Composio toolkit for OpenWeatherMap and no managed OAuth app, so there is nothing to connect through Composio's OAuth flow. Use the API key directly in your agent's tool configuration (appid query parameter or X-Api-Key header). Only revisit a Composio path if a toolkit appears."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio's toolkit catalog has no entry for OpenWeatherMap, so no managed OAuth app is available through Composio.",
+   "source_url": "https://openweathermap.org/api",
+   "quote": "No Composio toolkit found for 'openweathermap'",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Developer access is granted through a personal API key that is issued only after the account exists and its email address is verified.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Once your account is created and your email address is verified, you will receive your personal API key (APPID)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Keys are viewed on the account's API keys page, and additional keys can be created there.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "You can also create additional API keys there.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "The official FAQ says every API call must carry the user's unique API key, which is the stated authorisation mechanism.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "we require you to use your unique API key in each API call",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "A newly issued key is activated automatically, with the FAQ giving up to two hours after registration.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Your API key will be activated automatically, up to 2 hours after your successful registration.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "The homepage presents a free sign-up path alongside a separate pricing section, so a free account is the entry point.",
+   "source_url": "https://openweathermap.org/api",
+   "quote": "Subscribe for free",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "The developer dashboard sits behind a sign-in wall; an unauthenticated request to the API keys page is redirected to a members sign-in page.",
+   "source_url": "https://home.openweathermap.org/api_keys",
+   "quote": "You need to sign in or sign up before continuing.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The OAuth authorize path probed on the official domain returns 404 for an invalid client, so no live OAuth authorization endpoint appears to be served there.",
+   "source_url": "https://openweathermap.org/oauth/authorize",
+   "quote": "OpenWeather | Business",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "No OpenID Connect discovery document is published on the provider's domain; the well-known configuration probe returned 404.",
+   "source_url": "https://openweathermap.org/.well-known/openid-configuration",
+   "quote": "found: false",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "A third-party integration guide describes OpenWeatherMap as key-only: every request needs an API key sent as the appid query parameter or as a header.",
+   "source_url": "https://dlthub.com/context/source/open-weather",
+   "quote": "all requests require an API key (appid) as a query parameter or header",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Per a third-party guide, some newer endpoints accept the key in an X-Api-Key header instead of the query string, which is still key-based rather than OAuth.",
+   "source_url": "https://dlthub.com/context/source/open-weather",
+   "quote": "it via an 'X-Api-Key' request header",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "The Weather Maps 2.0 documentation states that its endpoint needs only API key authentication.",
+   "source_url": "https://openweathermap.org/api/weathermaps",
+   "quote": "It requires only the API key authentication.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Third-party guidance notes that early 401 'Invalid API key' errors right after signup are expected while the key activates.",
+   "source_url": "https://dev.to/joycefosterr/how-to-use-the-openweathermap-api-a-practical-guide-57i2",
+   "quote": "If you receive an \"Invalid API key\" error immediately after signing up, this is expected",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "A third-party API index says some data availability, such as historical data, depends on the subscription plan.",
+   "source_url": "https://openpublicapis.com/api/openweathermap",
+   "quote": "availability depends on subscription plan",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "The One Call 3.0 documentation page is publicly readable without a login wall, so endpoint docs can be reviewed before signing up.",
+   "source_url": "https://openweathermap.org/api/one-call-3",
+   "quote": "One Call API 3.0",
+   "status": "probed",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No OAuth app creation, redirect URI, PKCE, refresh token, scope, or review process was found. Confirm with OpenWeatherMap support whether any partner or OAuth program exists.",
+  "Subscription tiers, prices, and call limits were not verified from the pricing page.",
+  "No review, listing, install-cap, or rate-limit rules for third-party OAuth apps were found.",
+  "Third-party wrappers that use the name 'OpenWeatherMap' (e.g., Make, Garmin) may have their own connection flows. They are not the provider's OAuth program and are not covered here.",
+  "The OAuth probes used guessed paths on openweathermap.org. home.openweathermap.org was not probed for an OAuth route."
+ ],
+ "slug": "openweathermap_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:06:10+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 27,
+  "probes_run": 6,
+  "research_seconds": 71,
+  "est_cost_usd": 0.0321,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0321
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 16,
+    "out": 13599,
+    "cache_read": 82214,
+    "cache_write": 38738,
+    "search": 2
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

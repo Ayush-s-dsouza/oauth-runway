@@ -124,7 +124,7 @@ Report whichever result comes out. Neither should be hidden.
 - The answer key is model-authored, from the curated guides. Each fact traces to a fetched source, but none is human-verified.
 - 25 facts across 6 apps gives coarse resolution, roughly ±10–15 points.
 - The famous apps are partly answerable from memory.
-- The judge hasn't been calibrated against human grades yet.
+- The judge hasn't been calibrated against human grades. *Update:* cross-checked against a second judge model, with identical scores on 31 of 35 guides and all within one fact.
 
 **What would change my mind:** if the judge disagrees with a human on more than about 1 in 10 of a hand-graded sample, fix the judge prompt before trusting any comparison. If baseline and v1 differ by less than the noise floor, add reps on the reference slice before deciding anything.
 
@@ -219,3 +219,36 @@ Against v6 (full lock), the quote-only lock improved quote support on every app 
 **What would change my mind:**
 - A Sonnet-writer variant matching v7. Writing is about 85% of v7's cost, so that is the next saving to test.
 - A human-verified answer key, or a larger case set, separating v7 from v1.
+
+---
+
+## 2026-10-29 — Keep Opus as the writer; Sonnet tested and rejected
+
+**Tested:** v8 = v7 with Sonnet 5.5 writing. Writing is about 85% of v7's cost, so this was the biggest saving left to try.
+
+**Result:**
+- Sonnet halves the cost ($0.19 vs $0.40) but states fewer key facts (0.83 vs 0.90) and judges difficulty as badly as Haiku (0.61 vs 0.24).
+- In 5 of 18 runs it renamed every evidence ID, which the lock correctly treats as unverifiable.
+- Even on its clean runs, recall was 0.82 and difficulty error 0.62.
+- A second judge (Opus) confirmed the ordering, so this isn't the Sonnet judge favouring Sonnet's writing.
+
+**What would change my mind:** a future Sonnet matching Opus on difficulty judgement in this eval. One command reruns it: `python -m evals.run --variant v8`.
+
+---
+
+## 2026-10-29 — Host on Render's free plan, not Cloudflare
+
+**Decision:** deploy with the Render Blueprint (`render.yaml`, free plan, Docker), with live generation capped at 15 a day.
+
+**Alternatives rejected:**
+- *Cloudflare Workers:* the free tier allows about 10 ms of CPU per request and keeps no memory between requests. A guide is a 2–5 minute background job streamed over SSE, which would mean a rewrite onto Durable Objects.
+- *Cloudflare Containers:* paid plan.
+- *Hugging Face Docker Spaces:* now require a paid plan.
+- *Fly.io:* no free tier for new accounts.
+- *Railway and Vercel:* the free allowance is already used.
+
+**Known costs of the free plan:**
+- It sleeps after 15 idle minutes, and the next visit takes about a minute to wake.
+- The disk is wiped on sleep, so live-generated guides are lost.
+
+The second is handled by bundling 17 agent-generated guides (16 from the v7 eval plus the live Calendly run) in `guides/agent/`. They're labelled as agent-generated and not reviewed, so the deployed library always shows real agent output.

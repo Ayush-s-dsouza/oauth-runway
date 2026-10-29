@@ -1,0 +1,614 @@
+{
+ "app": {
+  "name": "Xero",
+  "website": "https://developer.xero.com",
+  "developer_portal_url": "https://developer.xero.com/app/manage",
+  "oauth_docs_url": "https://developer.xero.com/documentation/guides/oauth2/scopes/",
+  "category": "Accounting"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "Creating your own Xero app and connecting your own organisation is quick and needs no review. The hard part is scale: uncertified apps are capped at a small number of connections, and going beyond that means Xero app partner certification, whose timeline and rejection criteria were not found.",
+  "hands_on_effort": "30-60 min for your own connection; 1-3 days to prepare scopes and certification evidence if you pursue partner status (estimate, not from sources)",
+  "time_to_first_connection": "15-30 min once you have a Xero developer login and an org to connect (estimate)",
+  "approval_wait": "None for your own org or for uncertified connections within the caps. Partner certification wait time was not found."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Own app, own organisation",
+   "unlocks": "Create a Xero app and connect your own Xero organisation through Composio using your own client ID and secret.",
+   "limits": [
+    "Xero's free Starter tier allows up to 5 connections (f8).",
+    "The Xero demo company is excluded from the uncertified connection count (f6)."
+   ],
+   "time_to_reach": "Minutes",
+   "requires_review": false,
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f8"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Uncertified (non-partner) app",
+   "unlocks": "Other users can connect their Xero organisations to your app, up to the uncertified caps.",
+   "limits": [
+    "25 permanent active connections, excluding demo companies (f6, f7).",
+    "No more than 5 connections to uncertified apps per Xero organisation (f10).",
+    "Multiple users connecting to the same organisation count as one connection (f9).",
+    "Token lifetime and refresh rotation not verified (see open questions)."
+   ],
+   "time_to_reach": "Same session as Gate 1; no review step was found for uncertified apps (confirm in the console)",
+   "requires_review": false,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f9",
+    "f10"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Xero app partner (certified, listed on Xero App Store)",
+   "unlocks": "Connection volume beyond the uncertified caps and a public App Store listing.",
+   "limits": [
+    "Requires adherence to Xero App Store terms and a Xero App Store listing (f12).",
+    "Must pass certification checkpoints 1-6, including scopes and error handling (f11).",
+    "Partner prerequisites such as paid plan, business verification or MRR thresholds were not confirmed."
+   ],
+   "time_to_reach": "Unknown: review timelines and typical rejection reasons were not found.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f11",
+    "f12"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide whether you need your own app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Composio's catalog lists no managed OAuth app for Xero, so you must register your own Xero app and use its client ID and client secret in Composio. Xero rejects unregistered client IDs at the authorize step with an 'unauthorized_client' error, so a placeholder will not work.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "Composio's managed_oauth_available is false for Xero."
+   ],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Sign in to the Xero developer portal",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open developer.xero.com/app/manage and sign in with the Xero account you will use as the developer. The page is client-side and needs JavaScript enabled.",
+   "url": "https://developer.xero.com/app/manage",
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "Whether a free developer account is required, and whether an org admin is needed, was not verified."
+   ],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create the app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Create a new app in the developer portal. The app type options and form field labels were not verified in this research, so follow what the console shows and record the app's client ID and client secret.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Set the redirect URI",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In your Xero app's OAuth 2.0 configuration, add the redirect URI from Composio. Paste the exact callback URL shown in your Composio auth config.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": null,
+   "gotchas": [
+    "Whether Xero requires exact matching (no wildcards) and whether http localhost is allowed was not verified."
+   ],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Confirm the Xero endpoints Composio will use",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Check that the authorization and token endpoints in the Composio auth config match Xero's published OpenID configuration. The authorize endpoint is login.xero.com and the token endpoint is identity.xero.com/connect/token.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorization endpoint",
+     "value": "https://login.xero.com/identity/connect/authorize"
+    },
+    {
+     "label": "Token endpoint",
+     "value": "https://identity.xero.com/connect/token"
+    }
+   ],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Choose the scopes you actually need",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Composio's default list is about 30 scopes, including many accounting read and write scopes. Remove any scope your use case does not need before you authorize. The exact scope list and the restricted scopes were not verified from Xero's scopes page.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "Partner certification checks for minimal access, so a broad list will cost you later."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Draft a scope justification",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "For each scope you keep, write one line that names the feature that needs it. Keep this document; you will need it if you apply for partner certification.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Enter client credentials in Composio and connect your own org",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Copy the client ID and client secret from the Xero app into the Composio auth config for Xero. Then authorize the connection with a Xero organisation you control and confirm it appears as connected.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "If Xero returns 'Unknown client or client not enabled', the client ID is wrong or the app is not enabled."
+   ],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Plan around the uncertified connection caps",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Count the organisations you expect to connect. Non-partner apps are capped at 25 permanent active connections, excluding demo companies, and each Xero organisation accepts no more than 5 uncertified-app connections. Multiple users in the same organisation count once. Free Starter-tier organisations allow up to 5 connections.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "Sources differ on whether the 25 cap applies across all tiers; confirm in the Xero console before you plan a launch."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Decide whether to pursue partner certification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Partner status is needed if you expect more connections than the uncertified caps allow. It requires adhering to the Xero App Store terms, being listed on the App Store, and meeting technical and security standards.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f7",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare certification evidence",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Draft a document mapping your app to each checkpoint: 1 Connection, 2 Branding and Naming, 3 App Launcher, 4 Scopes, 5 Error handling, 6 Data Integrity. Include the scope justifications from earlier and your error-handling behaviour for failed token refresh and revoked connections.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f11",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit for partner certification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Submit the app and its App Store listing for Xero partner certification through the developer portal or the Xero App Store partner channel. The submission route was not verified in this research.",
+   "url": "https://developer.xero.com/documentation/xero-app-store/app-partner-guides/certification-checkpoints",
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f11",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for certification review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Xero reviews the app against the checkpoints. Review timelines and common rejection reasons were not found, so plan for an open-ended wait and track responses in the developer portal.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f11"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Xero developer portal login",
+   "gate": 1,
+   "detail": "Sign in at developer.xero.com/app/manage to create the app. Whether a free developer account or org admin role is needed was not verified.",
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "A Xero organisation you can authorize",
+   "gate": 1,
+   "detail": "Unregistered client IDs are rejected at authorization, so the app must be created before any connection test.",
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "PKCE with S256 if you use a public client",
+   "gate": 1,
+   "detail": "Xero's discovery document lists S256 as the only code challenge method; Xero documents a separate PKCE flow.",
+   "evidence_ids": [
+    "f4",
+    "f5"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "Uncertified connection caps",
+   "gate": 2,
+   "detail": "25 permanent active connections (excluding demo companies), 5 uncertified connections per organisation, one count per organisation regardless of user count.",
+   "evidence_ids": [
+    "f6",
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Xero App Store terms, listing, and technical/security standards",
+   "gate": 3,
+   "detail": "Required to become an app partner. Partner prerequisites such as paid plan or MRR thresholds were not confirmed.",
+   "evidence_ids": [
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Certification checkpoints 1-6",
+   "gate": 3,
+   "detail": "Connection, Branding and Naming, App Launcher, Scopes, Error handling, Data Integrity.",
+   "evidence_ids": [
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Minimal scopes per use case",
+   "gate": 3,
+   "detail": "Partner certification requires minimal access to data for the use case.",
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "Composio default list (about 30 scopes, including accounting.* read/write, files, projects, openid, profile, email, offline_access)",
+   "tier": "unknown",
+   "effect": "Long default list. Narrow it to what your use case needs. The Xero scopes page was not retrievable, so which scopes are restricted is unverified.",
+   "evidence_ids": [
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "offline_access",
+   "tier": "unknown",
+   "effect": "Needed for a refresh token in Composio's default list. Refresh token lifetime and rotation were not verified.",
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "accounting.* read and write scopes",
+   "tier": "unknown",
+   "effect": "Partner certification checks that apps request only the minimal access their use case requires. Justify each write scope separately.",
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "community"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Authorize step returns 'unauthorized_client: Unknown client or client not enabled'.",
+   "cause": "The client ID does not match a registered, enabled Xero app.",
+   "fix": "Copy the client ID from your Xero app in developer.xero.com/app/manage into the Composio auth config, and confirm the app is enabled.",
+   "contact": null,
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "New connections refused after about 25 organisations, or a single organisation refuses a 6th uncertified connection.",
+   "cause": "Uncertified (non-partner) app caps: 25 permanent active connections and 5 uncertified connections per organisation.",
+   "fix": "Limit the pilot to the cap, or apply for partner certification before wider launch.",
+   "contact": null,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Partner certification could be rejected on scopes.",
+   "cause": "Certification requires minimal access; a broad default scope list fails that check. Restricted scopes are not verified.",
+   "fix": "Narrow the scope list to what each feature needs and write a justification per scope before submission.",
+   "contact": null,
+   "evidence_ids": [
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "xero",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "offline_access",
+   "email",
+   "profile",
+   "openid",
+   "files",
+   "files.read",
+   "projects",
+   "projects.read",
+   "accounting.manualjournals.read",
+   "accounting.manualjournals",
+   "accounting.banktransactions.read",
+   "accounting.banktransactions",
+   "accounting.payments.read",
+   "accounting.payments",
+   "accounting.invoices.read",
+   "accounting.invoices",
+   "accounting.reports.tenninetynine.read",
+   "accounting.budgets.read",
+   "accounting.attachments.read",
+   "accounting.attachments",
+   "accounting.contacts.read",
+   "accounting.contacts",
+   "accounting.settings.read",
+   "accounting.settings",
+   "accounting.reports.taxreports.read",
+   "accounting.reports.trialbalance.read",
+   "accounting.reports.profitandloss.read",
+   "accounting.reports.executivesummary.read",
+   "accounting.reports.budgetsummary.read",
+   "accounting.reports.banksummary.read",
+   "accounting.reports.aged.read"
+  ],
+  "note": "Composio has no managed OAuth app for Xero, so you need your own Xero app and client credentials to connect through Composio. Start with your own app for your own org (Gate 1). The uncertified caps (Gate 2) apply to every user you connect, so a launch beyond about 25 organisations or 5 per organisation needs partner certification (Gate 3). Composio's default redirect URI and default scope list are long; use the callback URL from your Composio auth config and narrow the scopes before going live."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Xero's developer app management page is at developer.xero.com/app/manage and renders client-side.",
+   "source_url": "https://developer.xero.com/app/manage",
+   "quote": "You need to enable JavaScript to run this app.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "The authorize endpoint rejects unregistered client IDs with an unknown-client error.",
+   "source_url": "https://login.xero.com/identity/connect/authorize",
+   "quote": "Error: unauthorized_client Unknown client or client not enabled",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Xero's OpenID discovery document lists the authorization endpoint at login.xero.com and the token endpoint at identity.xero.com/connect/token.",
+   "source_url": "https://identity.xero.com/.well-known/openid-configuration",
+   "quote": "authorization_endpoint: https://login.xero.com/identity/connect/authorize",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "PKCE with S256 is the only code challenge method listed in Xero's discovery document.",
+   "source_url": "https://identity.xero.com/.well-known/openid-configuration",
+   "quote": "code_challenge_methods_supported: [\"S256\"]",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Xero documents a PKCE flow as a separate guide.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/pkce-flow",
+   "quote": "The Proof Key for Code Exchange (PKCE) flow",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Uncertified apps have a limit of 25 permanent active connections, excluding demo companies.",
+   "source_url": "https://community.xero.com/developer/discussion/119013170",
+   "quote": "Uncertified apps will have 25 permanent active connections limit (excluding Demo Companies).",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Non-partner apps are capped at 25 business connections; partner status is needed to exceed the cap.",
+   "source_url": "https://docs.railz.ai/docs/integrations-accounting-xero",
+   "quote": "To link more than 25 business connections (excluding connections to the Xero demo company) you must become a Xero app partner.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The free Starter tier allows up to 5 connections; the Core tier allows up to 50.",
+   "source_url": "https://developer.xero.com/documentation/best-practices/managing-connections/connections/",
+   "quote": "The free Starter Tier allows up to 5 connections, you are then able to upgrade to the Core Tier which allows up to 50 connections.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Multiple users connecting to the same organisation count as one connection.",
+   "source_url": "https://developer.xero.com/documentation/best-practices/managing-connections/connections/",
+   "quote": "Multiple users can connect your app to the same tenant, but only one of those connections will count towards your connection limit.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Each Xero organisation is limited to 5 connections to uncertified apps.",
+   "source_url": "https://developer.xero.com/documentation/best-practices/managing-connections/connections/",
+   "quote": "Xero organisations are restricted to no more than 5 connections to uncertified apps.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Xero's certification process reviews apps against numbered checkpoints (connection, branding and naming, app launcher, scopes, error handling, data integrity).",
+   "source_url": "https://developer.xero.com/documentation/xero-app-store/app-partner-guides/certification-checkpoints",
+   "quote": "Checkpoint 1: Connection, Checkpoint 2: Branding and Naming, Checkpoint 3: App Launcher, Checkpoint 4: Scopes, Checkpoint 5: Error handling, Checkpoint 6: Data Integrity",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Partner status requires adherence to App Store terms, a Xero App Store listing, and technical and security standards.",
+   "source_url": "https://developer.xero.com/static/otherfiles/Grow-with-the-Xero-App-Store.pdf",
+   "quote": "To become an app partner, you must: adhere to the Xero App Store terms; be listed on the Xero App Store; meet technical and security standards as required",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Partner certification requires apps to have the minimal access to data their use case needs.",
+   "source_url": "https://docs.codat.io/integrations/accounting/xero/partner-certification/scopes/",
+   "quote": "requires that apps have the minimal access to data as required by their use case.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Xero's OAuth scopes page exists, but its contents were not retrieved, so restricted scopes were not verified.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/scopes/",
+   "quote": "Scopes — Xero Developer",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Refresh token lifetime and rotation rules were not verified from an official Xero page.",
+  "Whether Xero requires exact redirect URI matching (no wildcards) and whether http localhost is allowed was not verified.",
+  "Sources differ on the connection cap: f8 describes Starter (5) and Core (50) tiers, while f6 and f7 cite 25 for uncertified apps. Confirm which applies to your account before planning.",
+  "Partner prerequisites (paid plan, business verification, MRR or install thresholds) were not confirmed. The Grow PDF text was garbled and its MRR mention could not be verified.",
+  "Review timelines and typical rejection reasons for partner certification were not found.",
+  "Which Xero scopes are sensitive or restricted was not confirmed, because the scopes page was not retrievable.",
+  "Whether a free developer account is required and whether an org admin is needed to create the app was not verified.",
+  "Whether Xero offers a 'Custom Connections' single-organisation app type that would avoid the uncertified connection limit was seen in search results but not verified.",
+  "Whether uncertified apps need any review before other users can connect within the caps was not explicitly confirmed; the guide treats them as not requiring review."
+ ],
+ "slug": "xero_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:00:12+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 64,
+  "probes_run": 3,
+  "research_seconds": 104,
+  "est_cost_usd": 0.1032,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.1032
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 514,
+    "out": 17731,
+    "cache_read": 143891,
+    "cache_write": 28876,
+    "search": 9
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

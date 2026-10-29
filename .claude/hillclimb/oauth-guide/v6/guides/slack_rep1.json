@@ -1,0 +1,1114 @@
+{
+ "app": {
+  "name": "Slack",
+  "website": "https://slack.com",
+  "developer_portal_url": "https://api.slack.com/apps",
+  "oauth_docs_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+  "category": "Team communication / messaging"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "You can create a Slack app and install it in your own workspace in minutes. Turning on unlisted (public) distribution lets any workspace install it through a link with no review. But Slack's terms send commercial distribution through the Marketplace, and unlisted apps created after May 29, 2025 are throttled to 1 request per minute on conversations.history and conversations.replies. Marketplace submission needs 10 active workspace installs, then a review of up to 10 business days plus up to 10 weeks, and history and search scopes get an enhanced review.",
+  "hands_on_effort": "1-2 hours to reach unlisted distribution; 2-4 days to prepare Marketplace material (landing page, privacy policy, video, scope reasons)",
+  "time_to_first_connection": "15-30 min",
+  "approval_wait": "None for your own workspace or unlisted link installs. Marketplace: up to 10 business days (preliminary) plus up to 10 weeks (functional), after you reach 10 active installs."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Development workspace install",
+   "unlocks": "Your app installs in the workspace it was created in, so you can connect your own account through Composio.",
+   "limits": [
+    "A new app can only be installed in its associated workspace until distribution is turned on"
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f47",
+    "f49"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Unlisted distribution (Activate Public Distribution)",
+   "unlocks": "Any workspace that has the install link can install the app through OAuth. There is no review. You need this to collect the 10 active installs that Marketplace submission requires.",
+   "limits": [
+    "Not reviewed by Slack; Slack says commercially distributed apps should be listed in the Marketplace",
+    "Unlisted, commercially distributed apps created after May 29, 2025 (and new installs of older unlisted apps) are limited to 1 request/min on conversations.history and conversations.replies, with at most 15 objects per request",
+    "OAuth redirect, interactivity and events URLs must use HTTPS",
+    "Workspace admins may require approval before members can install apps (members can install without approval by default)"
+   ],
+   "time_to_reach": "Under 1 hour after the Manage Distribution checklist is complete",
+   "requires_review": false,
+   "evidence_ids": [
+    "f26",
+    "f27",
+    "f28",
+    "f29",
+    "f30",
+    "f50",
+    "f52"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Slack Marketplace listing",
+   "unlocks": "A public Marketplace listing, the approved channel for commercial distribution, and removal of the non-Marketplace history rate limit.",
+   "limits": [
+    "Submission is blocked below 10 installs on active workspaces (used in the past 28 days), and you must stay at 10+ for the whole review",
+    "Resubmitting during the preliminary stage resets your place in the queue",
+    "Slack will not speed up review to fit a launch date",
+    "After publishing, configuration, features and scopes are locked until you resubmit"
+   ],
+   "time_to_reach": "Up to 10 business days (preliminary) plus up to 10 weeks (functional) after submission; submission itself requires 10+ active workspace installs",
+   "requires_review": true,
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3",
+    "f6",
+    "f7",
+    "f8",
+    "f24",
+    "f31"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Sign in and create the Slack app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in to your Slack account at api.slack.com/apps and create a new app attached to your development workspace. You need a Slack account to create an app.",
+   "url": "https://api.slack.com/apps",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "The workspace you pick becomes the app's own workspace. It is the only place the app can be installed until you turn on distribution."
+   ],
+   "evidence_ids": [
+    "f47",
+    "f49"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Add the Redirect URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In app settings, open OAuth & Permissions and add a Redirect URL. Paste the exact callback URL shown in your Composio auth config. It must use HTTPS and cannot contain a # anchor.",
+   "url": "https://api.slack.com/apps",
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "2 min",
+   "gotchas": [
+    "If you configure more than one Redirect URL, send the same redirect_uri at both the authorize and the token-exchange steps, or Slack returns bad_redirect_uri."
+   ],
+   "evidence_ids": [
+    "f34",
+    "f37",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Choose a trimmed scope set",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Under OAuth & Permissions, add only the bot and user scopes your agent actually uses, instead of copying Composio's full default list. Leave out search:read.*, *:history and files:read unless they are core to the app, because they trigger an enhanced Marketplace review. Use user-token scopes only where the app acts as the signed-in user.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Scopes added in later installs add to the existing token. The only way to remove scopes is to revoke the token entirely.",
+    "Optional scopes (bot_optional / user_optional) still have to be shown in use, and the app must handle them being missing."
+   ],
+   "evidence_ids": [
+    "f19",
+    "f16",
+    "f17",
+    "f21",
+    "f23",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Decide on token rotation and PKCE before turning them on",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Without rotation, Slack OAuth tokens do not expire. With rotation on, access tokens expire (12 hours in Slack's example) and must be refreshed, and the original long-lived token expires after the first refresh. Leave PKCE off for a server-side Composio integration: it marks the app as a public client permanently, and its refresh tokens expire after 30 days.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "A community write-up reports that token rotation cannot be turned off once enabled.",
+    "Undoing PKCE requires contacting Slack support.",
+    "Desktop redirects (localhost or custom URI schemes) cannot request bot scopes."
+   ],
+   "evidence_ids": [
+    "f38",
+    "f39",
+    "f40",
+    "f41",
+    "f42",
+    "f43",
+    "f44"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy Client ID and Client Secret into Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Copy the Client ID and Client Secret from App Management and paste them into a custom Slack auth config in Composio, together with your chosen scopes. Composio uses https://slack.com/oauth/v2/authorize and https://slack.com/api/oauth.v2.access.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorization URL",
+     "value": "https://slack.com/oauth/v2/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://slack.com/api/oauth.v2.access"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f32",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Connect your own workspace and test",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Run a Composio connection and approve the install in your development workspace. Check that the token exchange succeeds and that a few tool calls work.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "The authorization code expires after 10 minutes. Check the state parameter on the callback."
+   ],
+   "evidence_ids": [
+    "f49",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Activate Public Distribution",
+   "owner": "you",
+   "gate": 2,
+   "detail": "In app settings, open Manage Distribution, complete the checklist, and click Activate Public Distribution. The app can then be installed in other workspaces through an install link, with no review.",
+   "url": "https://api.slack.com/apps",
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Unlisted apps created after May 29, 2025 that are distributed commercially are limited to 1 request/min on conversations.history and conversations.replies. This matters for agents that read message history.",
+    "Slack's terms treat the Marketplace as the channel for commercial distribution."
+   ],
+   "evidence_ids": [
+    "f26",
+    "f50",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Test install, onboarding and uninstall on a second workspace",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Install the app through the install link on a workspace that is not your development workspace. Go through onboarding and use, then uninstall it. Slack requires this before Marketplace submission.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "Target workspaces may require admin approval before the app can be installed. Approving the request also approves the app's scopes."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f52"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Reach 10 active workspace installs",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Get the unlisted app installed and used on at least 10 workspaces, each active within the past 28 days. Marketplace submission is blocked until you get there, and you need to stay at 10+ for the whole review.",
+   "url": null,
+   "values": [],
+   "est_time": "Varies (depends on your user base)",
+   "gotchas": [
+    "Older third-party guides still say 5. The current figure is 10."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare listing material",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Build a public landing page (not behind a login) with an Add to Slack path and a privacy policy link. The privacy policy must cover what data you collect, how you use it, how long you keep it, and how users request access or deletion, with an email or web form for contact. You also need a public support page that does not require an extra account and answers within 2 business days, plus 1600x1000 listing images (.jpg, .jpeg or .png, under 2MB) and a short description of 10 words or fewer.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 days",
+   "gotchas": [],
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Write scope justifications and record the demo video",
+   "owner": "you",
+   "gate": 3,
+   "detail": "For each scope, write how your app uses it, not what the scope does. An agent can draft these. Record a demo video of the full install and OAuth flow, setup, end-to-end use and uninstall, and post a 30-90 second listing video as a public YouTube link.",
+   "url": null,
+   "values": [],
+   "est_time": "3-5 hours",
+   "gotchas": [
+    "Scopes for features you haven't built yet will not be approved."
+   ],
+   "evidence_ids": [
+    "f20",
+    "f11",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit to the Slack Marketplace",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Submit the app for Marketplace review. Reviewers cannot use any Slack workspace, so include a way for them to install the app, plus test accounts with dummy data for any third-party service it connects to.",
+   "url": null,
+   "values": [],
+   "est_time": "1 hour",
+   "gotchas": [
+    "If your app connects Slack to an automation platform, you must limit installs to paid Slack plans, which requires the team.billing:read bot scope."
+   ],
+   "evidence_ids": [
+    "f10",
+    "f31",
+    "f51"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for preliminary and functional review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "The preliminary review takes up to 10 business days and checks your listing material and scope reasons. The functional review takes up to 10 weeks for new submissions. Respond to feedback promptly.",
+   "url": null,
+   "values": [],
+   "est_time": "Up to ~12 weeks",
+   "gotchas": [
+    "Resubmitting during the preliminary stage resets your place in the queue. Once a functional reviewer is assigned, resubmitting keeps your place."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Plan for post-publish changes",
+   "owner": "you",
+   "gate": 3,
+   "detail": "After publishing, any change to configuration, features or scopes needs a resubmission (up to 6 weeks for published apps). Keep a staging app identical to production for substantial changes, and do not hand out install links that include unreviewed scopes.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f24",
+    "f25",
+    "f6"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Slack account and a development workspace",
+   "gate": 1,
+   "detail": "You must sign in to create an app. The app installs only in its own workspace until distribution is turned on.",
+   "evidence_ids": [
+    "f47",
+    "f49"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "HTTPS Redirect URL that matches Composio's callback",
+   "gate": 1,
+   "detail": "Must be configured under OAuth & Permissions, must use HTTPS, and cannot contain a # anchor.",
+   "evidence_ids": [
+    "f34",
+    "f37"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "SSL on all public endpoints",
+   "gate": 2,
+   "detail": "Apps open to other workspaces must serve OAuth redirect, interactivity and events URLs over SSL.",
+   "evidence_ids": [
+    "f50"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "10+ installs on active workspaces",
+   "gate": 3,
+   "detail": "Each workspace must have been used in the past 28 days, and the count must stay at 10+ for the whole review.",
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Public landing page with Add to Slack and a privacy policy link",
+   "gate": 3,
+   "detail": "Must be a real page built for the app and not behind a login.",
+   "evidence_ids": [
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Privacy policy",
+   "gate": 3,
+   "detail": "Must cover data collected, how it is used, how long it is kept, and how users request access, transfer or deletion, with an email or web form contact. A physical address alone does not count.",
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Support channel",
+   "gate": 3,
+   "detail": "Public support page, no extra account required, replies within 2 business days.",
+   "evidence_ids": [
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Demo and listing videos",
+   "gate": 3,
+   "detail": "A demo of install/OAuth, setup, use and uninstall, plus a 30-90 second listing video as a public YouTube link.",
+   "evidence_ids": [
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Listing images and short description",
+   "gate": 3,
+   "detail": "1600x1000 (8:5), .jpg/.jpeg/.png, under 2MB; short description of 10 words or fewer.",
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Reviewer install path and test accounts",
+   "gate": 3,
+   "detail": "Reviewers cannot use Slack workspaces, so give them a way to install the app and dummy-data accounts for any third-party services.",
+   "evidence_ids": [
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Per-scope usage justification",
+   "gate": 3,
+   "detail": "Explain how the app uses each scope. Scopes for unbuilt features are rejected.",
+   "evidence_ids": [
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Tested install and uninstall on a non-development workspace",
+   "gate": 3,
+   "detail": "The app must be fully functional and publicly installable before you submit.",
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "channels:history, groups:history, im:history, mpim:history",
+   "tier": "sensitive",
+   "effect": "Triggers an enhanced Marketplace review. Broad history access is unlikely to be approved without a clear use case such as Real-time Search or an MCP server. Unlisted apps are also throttled on conversations.history.",
+   "evidence_ids": [
+    "f17",
+    "f19",
+    "f22",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "search:read.* (search:read.public, .private, .im, .mpim, .files, .users)",
+   "tier": "sensitive",
+   "effect": "Triggers an enhanced Marketplace review.",
+   "evidence_ids": [
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "search:read",
+   "tier": "restricted",
+   "effect": "Listed as a legacy/restricted scope that Marketplace apps cannot use.",
+   "evidence_ids": [
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "files:read",
+   "tier": "sensitive",
+   "effect": "Triggers an enhanced Marketplace review.",
+   "evidence_ids": [
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "users:read",
+   "tier": "sensitive",
+   "effect": "Slack's security guidance lists it as requiring manual review.",
+   "evidence_ids": [
+    "f22"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "admin.*",
+   "tier": "restricted",
+   "effect": "Not accepted for Marketplace apps, and unlikely to be approved outside Slack's partner program.",
+   "evidence_ids": [
+    "f16",
+    "f18",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "User-token scopes (any)",
+   "tier": "unknown",
+   "effect": "Only acceptable when the app acts as the signed-in user. Unnecessary use gets the submission returned.",
+   "evidence_ids": [
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "team.billing:read",
+   "tier": "unknown",
+   "effect": "Required for automation-platform apps, which must limit installs to paid Slack plans.",
+   "evidence_ids": [
+    "f51"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Cannot submit to the Marketplace",
+   "cause": "Fewer than 10 installs on workspaces active in the past 28 days.",
+   "fix": "Distribute the unlisted app until 10+ workspaces are installed and active, and keep them active through the review.",
+   "contact": null,
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "conversations.history / conversations.replies throttled to 1 request per minute with at most 15 objects",
+   "cause": "Non-Marketplace rate limit on commercially distributed unlisted apps created after May 29, 2025, and on new installs of older unlisted apps.",
+   "fix": "Get Marketplace approval. Internal customer-built apps are exempt.",
+   "contact": null,
+   "evidence_ids": [
+    "f28",
+    "f29"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "bad_redirect_uri error",
+   "cause": "redirect_uri missing or different between the authorize and token steps when several Redirect URLs are configured, or the URI is not under a configured Redirect URL.",
+   "fix": "Configure exactly the Composio callback URL and send the same redirect_uri at both steps.",
+   "contact": null,
+   "evidence_ids": [
+    "f34",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Submission returned, or scopes rejected in review",
+   "cause": "Restricted or legacy scopes, broad history or search scopes without a clear use case, unnecessary user-token scopes, or scope reasons that describe the scope instead of how the app uses it.",
+   "fix": "Trim scopes to features that exist, and write usage-based justifications.",
+   "contact": null,
+   "evidence_ids": [
+    "f16",
+    "f17",
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Customers see an error on the install link after publishing",
+   "cause": "The install link requests scopes that were not reviewed. Published apps are locked.",
+   "fix": "Resubmit for review before adding scopes, and use a staging app for substantial changes.",
+   "contact": null,
+   "evidence_ids": [
+    "f24",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Review is taking longer than expected",
+   "cause": "Resubmitting during the preliminary stage resets your place in the queue, and Slack does not expedite reviews.",
+   "fix": "Submit complete material early and avoid resubmitting during the preliminary stage.",
+   "contact": null,
+   "evidence_ids": [
+    "f7",
+    "f8"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "slack",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "calls:read",
+   "calls:write",
+   "channels:history",
+   "channels:read",
+   "channels:write",
+   "chat:write",
+   "dnd:read",
+   "dnd:write",
+   "emoji:read",
+   "files:read",
+   "files:write",
+   "groups:history",
+   "groups:read",
+   "groups:write",
+   "im:history",
+   "im:read",
+   "im:write",
+   "links:read",
+   "links:write",
+   "lists:read",
+   "lists:write",
+   "mpim:history",
+   "mpim:read",
+   "mpim:write",
+   "pins:read",
+   "pins:write",
+   "reactions:read",
+   "reactions:write",
+   "reminders:read",
+   "reminders:write",
+   "remote_files:read",
+   "remote_files:share",
+   "search:read",
+   "search:read.files",
+   "search:read.im",
+   "search:read.mpim",
+   "search:read.private",
+   "search:read.public",
+   "search:read.users",
+   "team:read"
+  ],
+  "note": "Start on Composio's managed Slack app to prototype quickly. It uses https://slack.com/oauth/v2/authorize and https://slack.com/api/oauth.v2.access. Register your own app when you need your own branding, a scope set you control, or a Marketplace listing for commercial distribution. Composio's default set includes history, search and files:read scopes that trigger enhanced review, plus search:read, which Marketplace apps cannot use, so trim them for your own app. It is not confirmed whether the managed app is itself subject to Slack review or the unlisted-app history rate limit."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Marketplace submission requires the app to be installed on at least 10 active workspaces. Apps below that are blocked from submitting at all, not just rejected at review.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "Your app has been installed on 10 or more active workspaces",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Reviewers cannot use any Slack workspace, including test ones, so the developer must provide a way for the reviewer to install the app. Test accounts with dummy data are needed for any third-party service the app connects to.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "We cannot access any Slack workspaces (even created for testing)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "A new submission needs a demo video showing the full install and OAuth flow, setup, end-to-end use, and uninstall. Listing videos should run 30 to 90 seconds and be a public YouTube link.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "Keep your video length between 30-90 seconds.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "The landing page must be publicly accessible, not behind a login, and must be a real web page built for the app. It needs an Add to Slack path and a link to the privacy policy.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "your landing page needs to be publicly accessible (i.e. not behind a login)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "The privacy policy must say what data is collected, how it is used, how long it is kept, and how users request access, transfer, or deletion. It needs a contact route, and a physical address alone does not count.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "At a minimum should be an email address or a webform.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Listing images need to be 1600x1000 (8:5 ratio), in .jpg, .jpeg, or .png format, and under 2MB. The short description must be 10 words or fewer.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "Use a 1600px by 1000px size (8:5 ratio).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Support must be responsive, with a reply expected within 2 business days. The support route cannot require an extra account, and the support page must be public.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "We expect support requests to receive a response within",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Legacy and restricted scopes are not accepted for Marketplace apps. Examples include admin.*, identity.*, search:read, workflow.steps:execute, and triggers:*.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "use legacy/restricted scopes or methods",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Broad access to message or file history is unlikely to be approved without a clear use case, such as Real-time Search or an MCP server.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "We are unlikely to approve broad access to workspace message/file data (e.g. user token *:history scopes) without a clear use case",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Admin scopes are unlikely to be approved for Marketplace apps unless the developer is in Slack's partner program.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "We are unlikely to approve use of admin* scopes by apps submitting to the Slack Marketplace who are not part of our partner program",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Some scopes trigger an enhanced review: search:read.*, *:history, files:read, canvases:read, certain user-token write scopes, conversations.connect:write, and admin.*.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "your submission will be subject to an enhanced review",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "An active workspace is one used in the past 28 days, so an install that has gone idle does not count toward the threshold.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "An active workspace is a workspace that has been used in the past 28 days.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Each scope needs a reason based on how the app uses it, not what the scope does. Scopes for features not yet built are not approved.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "Don’t just tell us what the scope does (we know that already) but rather tell us how your app uses it",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "User-token scopes are acceptable only when the app acts as the authenticating user. Submissions that use user-token scopes unnecessarily get returned.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "Use of user token scopes should only be used when your app is acting as your authenticating user",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Slack's security guidance sorts scopes into always allowed, requires manual review (for example channels:history and users:read), and restricted.",
+   "source_url": "https://docs.slack.dev/concepts/security",
+   "quote": "Requires approval: Higher-risk scopes that require manual review (e.g., channels:history, users:read).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Scopes can be marked optional in app settings or in the manifest with bot_optional and user_optional. The app must demonstrate use of both required and optional scopes and handle missing optional ones gracefully.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "Apps must demonstrate usage of all scopes (both required and optional)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Once a Marketplace app is published, its configuration, features, and scopes are locked. Any change needs resubmission, and an install link with unreviewed scopes shows customers an error.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "you will not be able to make any changes to your app’s configuration, features, or scopes without re-submitting the app for review.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Changes that add functionality or scopes need a video demo, and substantial changes may need a staging app identical to the published app.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "we will require access to a test or staging app that is identical to your published app",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Unlisted distribution is turned on in app settings under Manage Distribution, after the checklist is complete. This makes the app installable through a link, but it is not reviewed.",
+   "source_url": "https://docs.slack.dev/app-management/distribution",
+   "quote": "Click **Activate Public Distribution**.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Slack's distribution page says apps intended for commercial distribution should go through Marketplace submission and approval, not stay unlisted.",
+   "source_url": "https://docs.slack.dev/app-management/distribution",
+   "quote": "apps intended for commercial distribution should be submitted and approved for listing in the Slack Marketplace.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Unlisted apps that were created after May 29, 2025 and are commercially distributed are limited to 1 request per minute on conversations.history and conversations.replies, unless the app is approved for the Marketplace. The per-request cap drops to 15 objects.",
+   "source_url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps",
+   "quote": "will be limited to 1 request per minute, unless they are approved for the Slack Marketplace.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f29",
+   "claim": "The new non-Marketplace limit also applies to new installs of existing unlisted apps. Existing installs of unlisted apps were not affected. Internal customer-built apps are excluded and keep a limit of 50+ requests per minute.",
+   "source_url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps",
+   "quote": "Internal customer-built applications are not impacted by these changes and continue to have a rate limit of 1,000 messages per request at 50+ requests per minute.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f3",
+   "claim": "The 10-install threshold went up from a temporary lower level as of July 2026, and the count must stay at 10 or more through the whole review.",
+   "source_url": "https://docs.slack.dev/changelog/2026/09/01/slack-marketplace-install-requirement/",
+   "quote": "As of July 2026, we require that apps submitting to the Slack Marketplace have at least 10 installations on active workspaces, up from the temporary lower threshold.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Slack's terms make the Marketplace the only appropriate channel for commercially distributing Slack-built apps, including unlisted ones and one-off custom apps. Slack also says it does not charge for Marketplace inclusion.",
+   "source_url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps",
+   "quote": "Slack does not charge for Marketplace inclusion, so it is open to developers who meet Marketplace guidelines and submit for review.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f31",
+   "claim": "Before an app is published on the Marketplace, Slack runs a security review and analyzes the scopes it requests against its functionality.",
+   "source_url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps",
+   "quote": "before an app can be published on the Marketplace, we perform a security review and analyze the scopes that an application requests in light of its functionality.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f32",
+   "claim": "To start OAuth, the app redirects users to https://slack.com/oauth/v2/authorize with its client ID from App Management and a comma-separated scope list. Each set of scopes needs its own flow.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "Include both your app's client ID, which is found in the App Management page",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Scopes added in later installs are additive. Scopes can only be removed by revoking the token entirely.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "There is no way to remove scopes from an existing token without revoking it entirely.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "A redirect_uri must use HTTPS and must match or sit under a Redirect URL configured in App Management. A Redirect URL cannot contain a # anchor.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "Your `redirect_uri` must match or be a subdirectory of a Redirect URL configured under **App Management**.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "With several Redirect URLs configured, the redirect_uri must be sent at both the authorize and access steps with the same value. Otherwise Slack returns bad_redirect_uri.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "you will encounter a `bad_redirect_uri` error",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "The temporary authorization code expires after 10 minutes. It is exchanged at oauth.v2.access with the client ID and client secret, and the state parameter should be verified.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "which expires after ten minutes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Redirect URLs can be set on the OAuth & Permissions page in App Management, or passed as a redirect_uri parameter. Bolt's default callback path is /slack/oauth_redirect.",
+   "source_url": "https://docs.slack.dev/tools/bolt-js/concepts/authenticating-oauth/",
+   "quote": "You will need to add the full **Redirect URL** including your app domain in app settings under **OAuth and Permissions**",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "With token rotation on, access tokens expire after a set lifetime given by expires_in (12 hours, or 43200 seconds, in Slack's example), and the app must refresh them with a refresh token.",
+   "source_url": "https://docs.slack.dev/authentication/using-token-rotation/",
+   "quote": "The access token's lifespan is based on the expires_in field.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "After the first refresh, the original long-lived token expires. A given token can only be exchanged for a refresh token once.",
+   "source_url": "https://docs.slack.dev/authentication/using-token-rotation/",
+   "quote": "After you refresh your short-lived credentials for the first time, we'll expire your original long-lived access token.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "The 10-active-workspace minimum for Marketplace submissions dates back to an August 2023 changelog entry. An earlier changelog entry had announced a temporary drop to 5 starting August 11, but the later Slack pages state 10 as the current figure. Older third-party guides still cite 5.",
+   "source_url": "https://docs.slack.dev/changelog/",
+   "quote": "starting August 11th we will be reducing this requirement from 10 to 5 active workspaces!",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f40",
+   "claim": "Without rotation, OAuth tokens do not expire. They are revoked when the app is uninstalled, when a user removes their configuration, or when the authorizing user's account is deactivated.",
+   "source_url": "https://docs.slack.dev/authentication/installing-with-oauth",
+   "quote": "OAuth tokens do not expire. If they are no longer needed, they can be revoked.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f41",
+   "claim": "Token rotation, once turned on, is reported as not reversible by a community test write-up.",
+   "source_url": "https://slack.green/en/blog/slack-token-rotation",
+   "quote": "You cannot turn rotation off again.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f42",
+   "claim": "PKCE is optional. Enabling it marks the app as a public client, and this cannot be undone without contacting Slack support.",
+   "source_url": "https://docs.slack.dev/authentication/using-pkce",
+   "quote": "Enabling PKCE marks your app as a public client, which is is a one-way operation.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f43",
+   "claim": "With PKCE enabled, refresh tokens expire after 30 days instead of lasting indefinitely.",
+   "source_url": "https://docs.slack.dev/authentication/using-pkce",
+   "quote": "all refresh tokens issued to your app will expire in 30 days instead of lasting indefinitely.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f44",
+   "claim": "Desktop redirects, such as custom URI schemes or localhost, cannot request bot scopes.",
+   "source_url": "https://docs.slack.dev/authentication/using-pkce",
+   "quote": "Desktop redirects are not allowed to request bot scopes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f47",
+   "claim": "The app management page at api.slack.com/apps returns HTTP 200. Its page text says you need to sign in to create an app, so creating an app requires a Slack account.",
+   "source_url": "https://api.slack.com/apps",
+   "quote": "You'll need to sign in to your Slack account to create an application.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f49",
+   "claim": "A new Slack app can only be installed in its own workspace at first. Installing it in other workspaces requires an OAuth flow, which produces per-workspace tokens.",
+   "source_url": "https://docs.slack.dev/app-management/distribution",
+   "quote": "By default, a newly built Slack app can only be installed in its associated workspace as mentioned above.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Apps installed on fewer than 10 active workspaces and with fewer than 10 weekly active users are treated as not suitable for the Marketplace.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "are installed on less than 10 active workspaces and have less than 10 weekly active users.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f50",
+   "claim": "Apps open to installation by other workspaces must serve SSL on their OAuth redirect URLs, interaction request URLs, and events URLs.",
+   "source_url": "https://docs.slack.dev/app-management/distribution",
+   "quote": "Slack apps open to installation by other workspaces have additional security requirements.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f51",
+   "claim": "Marketplace apps that connect Slack to an automation platform must limit installs to paid Slack plans, which requires the team.billing:read bot scope.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+   "quote": "we require that you limit the installation of your app to Slack workspaces on our paid plans.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f52",
+   "claim": "Workspace admins can require approval for app installs, and approving a request means approving the app's scopes. Members can install apps without approval by default.",
+   "source_url": "https://slack.com/help/articles/222386767-Manage-app-approval-for-your-workspace",
+   "quote": "by default, members can install them without approval from a Workspace Owner.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Marketplace review has a preliminary stage of up to 10 business days, which checks listing material and a reason for each scope and confirms the app can be installed. Then a functional stage of up to 10 weeks for new submissions and 6 weeks for resubmissions of published apps.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "the preliminary part of the review takes up to 10 business days to receive feedback, while the functional review takes up to 10 weeks for new submissions and 6 weeks for published apps resubmitting changes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Resubmitting during the preliminary stage resets your place in the queue. Once a reviewer has been assigned in the functional stage, resubmitting keeps your place.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "During this part of the review, your place in the queue is reset each time you resubmit.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Slack says it cannot speed up review to fit a launch date, so submissions should go in early enough to act on feedback.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "We are unable to skip or accelerate the review process in order to coordinate with your launch.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Before submitting, the app has to be fully functional and publicly installable. The developer must test install, onboarding, and uninstall on a workspace that is not their development workspace.",
+   "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide/",
+   "quote": "including uninstalling it, on a workspace that is not your development workspace",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Whether Composio's managed Slack app is itself subject to Marketplace or distribution review, and what install caps apply to it.",
+  "How the 1 request/minute history limit applies to Composio-brokered connections.",
+  "Whether a free Slack account is enough to create an app, or whether Developer Program approval is needed.",
+  "How long the enhanced review for *:history, search:read.* and files:read scopes takes, beyond the general timelines.",
+  "Whether refresh or access tokens ever expire for apps without rotation or PKCE (not tested).",
+  "What error the authorize endpoint returns for an unknown client_id (the probe was inconclusive)."
+ ],
+ "slug": "slack_rep1",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T19:01:07+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "4 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 59,
+  "probes_run": 3,
+  "research_seconds": 240,
+  "est_cost_usd": 0.4537,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0999,
+   "claude-opus-5-5": 0.3538
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 16,
+    "out": 34409,
+    "cache_read": 481994,
+    "cache_write": 162059,
+    "search": 6
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 13933,
+    "cache_read": 0,
+    "cache_write": 15019,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

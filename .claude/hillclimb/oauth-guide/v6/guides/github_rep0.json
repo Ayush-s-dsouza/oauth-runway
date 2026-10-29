@@ -1,0 +1,745 @@
+{
+ "app": {
+  "name": "GitHub (OAuth App)",
+  "website": "https://github.com",
+  "developer_portal_url": "https://github.com/settings/developers",
+  "oauth_docs_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+  "category": "Developer tools / source control"
+ },
+ "verdict": {
+  "difficulty": "instant",
+  "summary": "You can register a GitHub OAuth app in Developer settings and anyone can authorize it right away. GitHub does not review OAuth apps or their scopes. Two things can still get in the way: each organization's owners must approve the app before it can reach that organization's data, and GitHub Marketplace listings (optional) do go through review.",
+  "hands_on_effort": "20-40 min (plus a few days if you choose to prepare a Marketplace listing)",
+  "time_to_first_connection": "10-15 min",
+  "approval_wait": "None for public use. Organization owners approve apps on their own schedule. Marketplace listing review is optional and reported at 2-6 weeks (community report, no official SLA)."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Registered OAuth app (owner's own account)",
+   "unlocks": "You can authorize the app with your own GitHub account and call the API with the scopes you request.",
+   "limits": [
+    "Organizations with OAuth app access restrictions turned on (the default for new orgs) block the app from org resources, including private repos, until an owner approves it",
+    "2,000 access-token requests per hour per OAuth app",
+    "A user can sign in to the app at most 10 times per hour before re-authorization is forced",
+    "Tokens are subject to the user's 5,000 requests/hour primary REST limit"
+   ],
+   "time_to_reach": "10-15 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f3",
+    "f4",
+    "f5",
+    "f9",
+    "f10",
+    "f11"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Other users / organizations (no allowlist)",
+   "unlocks": "GitHub has no test-user allowlist. Any GitHub user can authorize the app, and organization data opens up once each org's owners approve the app.",
+   "limits": [
+    "No install or user cap for unlisted OAuth apps was found",
+    "Org approval: members or outside collaborators request it, and an owner approves it on the org's OAuth app policy page. Owners can limit who may request apps (members and outside collaborators, members only, or none)",
+    "Newly registered apps default to expiring tokens: an 8-hour access token plus a refresh token that expires after 6 months without use",
+    "Same rate limits as Gate 1"
+   ],
+   "time_to_reach": "Immediate for personal accounts; depends on each org owner's response for org data",
+   "requires_review": false,
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7",
+    "f13",
+    "f14",
+    "f27"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public use (optional GitHub Marketplace listing)",
+   "unlocks": "Anyone can already use the app without review. A Marketplace listing only adds discoverability in GitHub Marketplace and, for verified publishers, paid plans.",
+   "limits": [
+    "Marketplace listing requires a valid privacy policy link, a working support channel, a pricing plan, public availability, and webhooks for plan changes",
+    "Paid plans require a verified publisher organization and at least 200 users for OAuth apps",
+    "Only organization owners can submit listings for org-owned apps",
+    "Listing review has no official SLA and resubmitting may restart it"
+   ],
+   "time_to_reach": "Immediate without a listing. A listing is reported to take 2-6 weeks of review.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f20",
+    "f21",
+    "f22",
+    "f23",
+    "f24",
+    "f25",
+    "f27"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide between an OAuth app and a GitHub App",
+   "owner": "you",
+   "gate": 1,
+   "detail": "GitHub's docs recommend GitHub Apps. They use fine-grained permissions and have higher rate limits than OAuth apps, which use coarse scopes. This guide covers OAuth apps, which is what Composio's GitHub OAuth flow uses. Confirm that the coarse scopes and lower limits work for your agent before you start.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "The repo scope grants full read and write to every private repository the user can access, and there is no narrower OAuth alternative for private repos."
+   ],
+   "evidence_ids": [
+    "f12",
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Choose who owns the app: you personally or an organization",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Personal apps are created under your user Developer settings, and organization apps under the organization's settings > Developer settings. If you might later list the app on Marketplace with a paid plan, create it under an organization. Paid plans require a verified publisher org, and personal apps would have to be transferred first.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "Only organization owners can submit Marketplace listings for org-owned apps."
+   ],
+   "evidence_ids": [
+    "f26",
+    "f22",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Register a new OAuth app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in and open Developer settings > OAuth Apps (github.com/settings/developers), then create a new OAuth app. Enter an application name and homepage URL, plus a description if you want one.",
+   "url": "https://github.com/settings/developers",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "The exact form fields could not be checked because the page is behind sign-in. Follow what the form shows."
+   ],
+   "evidence_ids": [
+    "f3",
+    "f26"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Set the callback URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Paste the exact callback URL shown in your Composio auth config as the Authorization callback URL. GitHub accepts up to 10 callback URIs. A redirect_uri sent at authorization must match the registered host and port, and its path must sit under the registered path, or GitHub returns redirect_uri_mismatch.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "2 min",
+   "gotchas": [
+    "Composio's toolkit record lists backend.composio.dev/api/v1/auth-apps/add, but the live authorize flow used backend.composio.dev/api/v3/toolkits/auth/callback. Copy the value from your auth config, not from memory.",
+    "Wildcard matching can be turned on per URI. Turn it off unless you need it."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f15",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Review token expiry and flow settings",
+   "owner": "you",
+   "gate": 1,
+   "detail": "New apps default to expiring tokens: an 8-hour access token and a refresh token that expires after 6 months without use. Keep this setting unless you have a reason not to, and make sure your integration handles refresh. Leave device flow off unless you need a headless flow. If you use PKCE, use S256, because plain is rejected.",
+   "url": null,
+   "values": [],
+   "est_time": "3 min",
+   "gotchas": [
+    "Turning on expiring tokens later does not expire tokens already issued. Users must sign in again to get an expiring token.",
+    "The implicit grant is not supported."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f14",
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy the client ID and secret into Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "From the app's settings page, copy the Client ID and generate a client secret. Enter both in a Composio GitHub auth config that uses your own app instead of the managed one. Store the secret securely.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "GitHub may show the secret only once. Copy it before leaving the page."
+   ],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Pick the minimum scopes",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Composio's default scopes are broad: repo, user, gist, notifications, project, workflow, codespace. Trim them to what your agent actually calls. A request with no scope gets read-only access to public information. GitHub does not review scopes, but org owners and users see what you request.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Requesting repo or workflow makes it less likely that cautious org owners will approve the app."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f18",
+    "f19",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection from Composio, approve the GitHub consent screen, and make a simple API call, for example fetching the authenticated user. If GitHub returns redirect_uri_mismatch, compare the callback in Composio with the one registered on the app.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "If the client_id is wrong, GitHub sends you to the sign-in page instead of showing an OAuth error, so check the client_id carefully."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f16"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Get organization approval where users need org data",
+   "owner": "you",
+   "gate": 2,
+   "detail": "If you or your users need repositories in an organization that has OAuth app access restrictions turned on (the default for new orgs), a member requests approval for the app and an owner approves it on the org's OAuth app policy page. Until then, private repos and other org resources are unavailable to the app.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min plus owner response time",
+   "gotchas": [
+    "Owners can set who may request apps to members only, or to none. Under none, members cannot request approval at all.",
+    "GitHub's own privileged OAuth apps skip this restriction. Third-party apps like yours cannot."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Plan for rate limits",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Keep the app under 2,000 token requests per hour and avoid making a user sign in more than 10 times per hour. Reuse tokens and refresh them instead of re-authorizing. API calls count against each user's 5,000 requests/hour limit, and any rate-limit increase GitHub grants applies per app.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Exceeding the token-request limit blocks new token generation and can cause temporary outages for all users."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Optional: prepare a GitHub Marketplace listing",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Only do this if you want the app discoverable in Marketplace, since public use needs no review. Draft the listing with a valid privacy policy link, a working support channel, a pricing plan, and webhooks for plan changes. Paid plans need a verified publisher org and at least 200 users.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f21",
+    "f22"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Optional: submit the listing and wait for review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "An organization owner (or the personal account owner) submits the listing. An onboarding expert from GitHub then contacts you. A community report puts review at 2-6 weeks, and GitHub publishes no official SLA.",
+   "url": null,
+   "values": [],
+   "est_time": "2-6 weeks (reported)",
+   "gotchas": [
+    "Resubmitting may restart the review."
+   ],
+   "evidence_ids": [
+    "f23",
+    "f24",
+    "f25"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "GitHub account (personal or organization owner)",
+   "gate": 1,
+   "detail": "Needed to open Developer settings and register the app. Org apps are created under the org's Developer settings.",
+   "evidence_ids": [
+    "f3",
+    "f26"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "Callback URL matching Composio's",
+   "gate": 1,
+   "detail": "Up to 10 callback URIs. The host and port must match, and the path must sit under the registered path.",
+   "evidence_ids": [
+    "f15",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "PKCE with S256 (if PKCE is used)",
+   "gate": 1,
+   "detail": "Plain challenge method is rejected; implicit grant unsupported.",
+   "evidence_ids": [
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Organization owner approval",
+   "gate": 2,
+   "detail": "Required for each organization that has OAuth app access restrictions turned on, before the app can access that org's resources.",
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Privacy policy, support channel, pricing plan, plan-change webhooks",
+   "gate": 3,
+   "detail": "Required only for a Marketplace listing, not for public use.",
+   "evidence_ids": [
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Verified publisher org and 200+ users",
+   "gate": 3,
+   "detail": "Required only to offer a paid Marketplace plan for an OAuth app.",
+   "evidence_ids": [
+    "f22"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "(no scope)",
+   "tier": "basic",
+   "effect": "Read-only access to public information only.",
+   "evidence_ids": [
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "repo",
+   "tier": "basic",
+   "effect": "Full read/write to public, internal and private repos plus org projects, invitations, team memberships and webhooks. GitHub does not review it, but it is the main thing org owners weigh when deciding whether to approve the app.",
+   "evidence_ids": [
+    "f18",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "user, gist, notifications, project, workflow, codespace",
+   "tier": "basic",
+   "effect": "Part of Composio's default set. GitHub has no review tier for OAuth scopes, so drop any your agent does not use to keep the consent screen and org approvals simple.",
+   "evidence_ids": [
+    "f1",
+    "f20"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "offline_access",
+   "tier": "basic",
+   "effect": "Opts into expiring tokens with a refresh token. It does not change scope behavior or add prompts.",
+   "evidence_ids": [
+    "f13",
+    "f19"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "The connection succeeds but org repos are missing or the API returns access errors for org resources",
+   "cause": "The organization has OAuth app access restrictions turned on (the default for new orgs) and has not approved your app.",
+   "fix": "Have a member request approval for the app, and have an org owner approve it on the org's OAuth app policy page.",
+   "contact": null,
+   "evidence_ids": [
+    "f5",
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Members cannot request approval for the app",
+   "cause": "The org owner set the app-request policy to members only or none.",
+   "fix": "Ask an org owner to approve the app directly or to change the request policy.",
+   "contact": null,
+   "evidence_ids": [
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "redirect_uri_mismatch error",
+   "cause": "The redirect_uri Composio sends does not match the registered callback on host, port or path.",
+   "fix": "Copy the exact callback URL from your Composio auth config into the app's callback URLs.",
+   "contact": null,
+   "evidence_ids": [
+    "f16",
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "New tokens can't be generated or users are forced to re-authorize",
+   "cause": "The app exceeded 2,000 token requests per hour, or a user signed in more than 10 times in an hour.",
+   "fix": "Reuse and refresh tokens instead of re-running the OAuth flow, and back off when you get rate-limit errors.",
+   "contact": null,
+   "evidence_ids": [
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Old users never receive refresh tokens",
+   "cause": "Turning on expiring tokens does not convert existing long-lived tokens.",
+   "fix": "Ask those users to sign in again.",
+   "contact": null,
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "github",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "repo",
+   "user",
+   "gist",
+   "notifications",
+   "project",
+   "workflow",
+   "codespace"
+  ],
+  "note": "Start on Composio's managed GitHub OAuth app for prototyping. Switch to your own OAuth app when you want your own app name on the consent screen, a scope set narrower than Composio's broad default, or your own per-app rate-limit budget (2,000 token requests/hour per app). Org owners also approve your app specifically rather than a shared one. Registering your own app needs no GitHub review. Before you register, confirm the callback URL in your Composio auth config: the toolkit record and the live flow showed different URLs."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio lists managed OAuth as available for GitHub, with default scopes repo, user, gist, notifications, project, workflow, codespace and the GitHub authorize and token URLs.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/github",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f10",
+   "claim": "An OAuth app can have a user sign in no more than ten times per hour before re-authorization is forced. This is a separate limit from the ten-token limit.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/rate-limits-for-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Tokens from OAuth apps are governed by the signed-in user's 5,000-requests-per-hour primary limit, and rate-limit increases are granted per OAuth app and apply to every token it issues.",
+   "source_url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2026-03-10",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Per GitHub's own comparison, OAuth apps have lower rate limits than GitHub Apps and do not scale the way GitHub Apps do.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Since August 2026, an OAuth app can opt into expiring tokens: an eight-hour access token and a refresh token valid for six months. The app does this either by requesting the offline_access scope or by setting this in its registration. Newly registered apps default to short-lived tokens.",
+   "source_url": "https://github.blog/changelog/2026-08-14-multiple-redirect-uris-and-token-refresh-for-oauth-apps/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Refresh-token expiry is six months without use. Enabling expiring tokens at the app level does not expire existing long-lived tokens; users must sign in again to receive one.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "An OAuth app can register up to 10 callback URIs. Wildcard matching can be enabled per URI, and apps that had only one URI now show wildcard matching as on by default and should review it.",
+   "source_url": "https://github.blog/changelog/2026-08-14-multiple-redirect-uris-and-token-refresh-for-oauth-apps/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "A redirect_uri passed at authorization must match the registered callback on host (ignoring subdomains) and port, and its path must sit under the registered callback path. Otherwise GitHub returns a redirect_uri_mismatch error.",
+   "source_url": "https://github.com/github/docs/blob/main/content/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps.md",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "The web flow supports PKCE, but only with the S256 challenge method. Plain is rejected. The implicit grant is not supported. The device flow is available for headless apps once it is enabled in app settings.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "OAuth scopes are coarse: repo grants full read and write to public, internal, and private repositories, plus organization projects, invitations, team memberships, and webhooks. The docs advise considering a GitHub App, which uses fine-grained permissions instead of scopes.",
+   "source_url": "https://docs.github.com/en/enterprise-cloud@latest/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "A request with no scope grants read-only access to public information only, and the offline_access scope does not change scope behavior or add prompts.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Composio's toolkit record lists a default redirect URI of backend.composio.dev/api/v1/auth-apps/add, while the authorize probe used backend.composio.dev/api/v3/toolkits/auth/callback. The correct callback for a self-registered app is unconfirmed.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/github",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f20",
+   "claim": "Searches did not surface any sensitive, restricted, or review-gated OAuth scope list, and the scope pages do not describe a review step for OAuth scopes. Scope-based approval appears to be an organization-owner decision, not a GitHub review.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "GitHub Marketplace listing is open to anyone for free apps, but the publisher must meet general listing requirements: a valid privacy policy link, a working support channel, a pricing plan, publicly available status, and webhooks for plan changes.",
+   "source_url": "https://docs.github.com/en/apps/github-marketplace/creating-apps-for-github-marketplace/requirements-for-listing-an-app",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "A paid Marketplace plan needs an organization that is a verified publisher. A personally owned app must first be transferred to an organization. OAuth apps must also have at least 200 users before they can offer a paid plan.",
+   "source_url": "https://docs.github.com/en/apps/github-marketplace/creating-apps-for-github-marketplace/requirements-for-listing-an-app",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Only organization owners can create and submit Marketplace listings for org-owned apps; the GitHub App manager role does not carry that permission.",
+   "source_url": "https://docs.github.com/en/apps/github-marketplace/creating-apps-for-github-marketplace/requirements-for-listing-an-app",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "After submission, the listing goes to review, and an onboarding expert contacts the publisher about the onboarding process.",
+   "source_url": "https://docs.github.com/en/apps/github-marketplace/listing-an-app-on-github-marketplace/drafting-a-listing-for-your-app",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "A developer forum thread reports that Marketplace review typically takes two to six weeks, but no official SLA was found, and resubmitting may restart the review.",
+   "source_url": "https://github.com/orgs/community/discussions/174681",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Organization-owned OAuth apps are created from the organization's settings under Developer settings, and personal-account apps from the user's own Developer settings.",
+   "source_url": "https://medium.com/@tony.infisical/guide-to-using-oauth-2-0-to-access-github-api-818383862591",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Across searches, no install cap or user cap specific to unreviewed OAuth apps was found; the constraints that bind new OAuth apps are the organization access gate and the rate limits above.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "The Developer settings page for OAuth apps is behind a sign-in wall, so the portal exists but cannot be read without an account.",
+   "source_url": "https://github.com/settings/developers",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "The OAuth authorize endpoint is live. An unknown client_id is redirected to the GitHub sign-in page, not rejected with an OAuth error code.",
+   "source_url": "https://github.com/login/oauth/authorize",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "New GitHub organizations start with OAuth app access restrictions turned on. Until an owner approves an OAuth app, it loses access to the organization's resources, and private-repo API access is unavailable to unapproved apps.",
+   "source_url": "https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Members and outside collaborators can request approval for an unapproved OAuth app, and an organization owner then reviews the request and grants access from the organization's OAuth app policy page.",
+   "source_url": "https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/approving-oauth-apps-for-your-organization",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Since January 2026, organization owners pick one of three levels for who may request apps: members and outside collaborators, members only, or none. The default is members and outside collaborators.",
+   "source_url": "https://github.blog/changelog/2026-01-12-controlling-who-can-request-apps-for-your-organization-is-now-generally-available/",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "GitHub-owned privileged OAuth apps can still be authorized and used against organization data even when an organization restricts OAuth apps. Third-party apps cannot use this path.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/using-oauth-apps/privileged-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "OAuth apps are limited to 2,000 access-token requests per hour; going over blocks new token generation and can cause temporary outages.",
+   "source_url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/rate-limits-for-oauth-apps",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Which callback URL a self-registered app should use with Composio: backend.composio.dev/api/v1/auth-apps/add or backend.composio.dev/api/v3/toolkits/auth/callback? Check your Composio auth config.",
+  "The exact fields on GitHub's new OAuth app form (homepage URL, description, logo, expiring-token toggle) were not seen because the page is behind sign-in.",
+  "No official GitHub page confirms that unlisted OAuth apps have no install or user cap. This guide assumes they don't.",
+  "No official list of sensitive or review-gated OAuth scopes was found. This guide assumes GitHub does not review scopes.",
+  "GitHub publishes no official timeline for Marketplace review. The only figure found is a 2-6 week community estimate.",
+  "Expiring-token and offline_access behavior on GitHub Enterprise Server was not checked."
+ ],
+ "slug": "github_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T18:29:07+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "1 of 12 steps have no retrieved source",
+   "2 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 61,
+  "probes_run": 2,
+  "research_seconds": 154,
+  "est_cost_usd": 0.3314,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0849,
+   "claude-opus-5-5": 0.2465
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 14,
+    "out": 14993,
+    "cache_read": 366220,
+    "cache_write": 124728,
+    "search": 6
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 9839,
+    "cache_read": 0,
+    "cache_write": 9937,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

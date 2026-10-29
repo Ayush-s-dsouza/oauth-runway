@@ -1,0 +1,392 @@
+{
+ "app": {
+  "name": "ServiceNow",
+  "website": "https://www.servicenow.com/",
+  "developer_portal_url": "https://developer.servicenow.com/",
+  "oauth_docs_url": "https://developer.servicenow.com/blog.do?p=%2Fpost%2Finbound-oauth-auth-code-grant-flow-part-1%2F",
+  "category": "ITSM / Enterprise service management"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "ServiceNow has no central developer console for OAuth apps. You create the OAuth client inside each ServiceNow instance (System OAuth > Application Registry, or the Machine Identity Console on Zurich and later), and ServiceNow does not review it. The catch is that you need admin rights on every instance you want to connect. The ServiceNow Store review only applies if you choose to publish a Store listing.",
+  "hands_on_effort": "30-60 min per instance",
+  "time_to_first_connection": "20-40 min (if you already have admin on an instance)",
+  "approval_wait": "none for the OAuth client; 3-5 weeks (provider estimate) to 5-8 weeks (reported) only if you also list on the ServiceNow Store"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "OAuth client in your own instance (Application Registry / Machine Identity Console)",
+   "unlocks": "You can connect your own ServiceNow user account through Composio, using a client you created on an instance where you are admin, such as a free Personal Developer Instance (PDI) or your company's instance.",
+   "limits": [
+    "Needs admin access on the instance",
+    "A PDI is reclaimed after 10 days without activity",
+    "A PDI cannot publish to the Application Repository or the Store"
+   ],
+   "time_to_reach": "20-40 min",
+   "requires_review": false,
+   "evidence_ids": []
+  },
+  {
+   "level": 2,
+   "name": "Other users on the same instance",
+   "unlocks": "Any user who has a login on that instance can authorize the same client. What they can reach depends on their own roles and ACLs and on the client's auth scope settings.",
+   "limits": [
+    "Only users who have accounts on that instance",
+    "The findings found no published user or install cap for unreviewed clients",
+    "The access token and refresh token lifespans are set on the registry record"
+   ],
+   "time_to_reach": "Immediate once Gate 1 works",
+   "requires_review": false,
+   "evidence_ids": []
+  },
+  {
+   "level": 3,
+   "name": "Other organizations' instances (per-instance clients); optional ServiceNow Store listing",
+   "unlocks": "Users at other organizations can connect once an admin on their instance creates an OAuth client and enters its credentials and subdomain in Composio. None of this needs review. A Store listing is a separate, optional channel that goes through certification.",
+   "limits": [
+    "Every instance needs its own client, created by an admin on that instance",
+    "The Store requires Build Partner status, a scoped app, and a non-PDI instance",
+    "Any change to a Store app's code or listing must be recertified"
+   ],
+   "time_to_reach": "About 30 min per customer instance with no review. Store: 3-5 weeks of certification (provider estimate), or 5-8 weeks from build completion (reported).",
+   "requires_review": false,
+   "evidence_ids": []
+  }
+ ],
+ "steps": [
+  {
+   "title": "Get admin access to a ServiceNow instance",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Use your company's instance if you have admin on it. Otherwise sign in at the ServiceNow Developer site and request a free Personal Developer Instance (PDI). Note your instance subdomain: the part before .service-now.com.",
+   "url": "https://developer.servicenow.com/",
+   "values": [],
+   "est_time": "5-15 min",
+   "gotchas": [
+    "The Developer site needs JavaScript and a supported browser",
+    "An idle PDI is reclaimed after 10 days, and any OAuth client on it disappears with it"
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Open the OAuth client registry",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the instance, go to System OAuth > Application Registry, click New, and choose 'Create an OAuth API endpoint for external clients'. On Zurich (GA September 2025) and later you can instead use Machine Identity Console > Inbound Integrations > new integration. There you pick the Authorization Code grant type first and define scopes next.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "Do not choose the client-credentials grant. Composio needs the user-facing authorization-code flow, and the client-credentials grant ignores the Redirect URL."
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Enter the name and Redirect URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Give the client a Name. Set Redirect URL to the callback URL shown in your Composio auth config, not to a ServiceNow URL such as oauth_redirect.do. Keep the client confidential, not public.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "2 min",
+   "gotchas": [
+    "The redirect must be the client application's callback. The findings did not confirm whether ServiceNow requires an exact match, so paste the URL exactly as Composio shows it."
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Set token lifespans and the scope restriction",
+   "owner": "you",
+   "gate": 1,
+   "detail": "On the same record, set Access Token Lifespan and Refresh Token Lifespan. For reference, other vendors' guides use 14400 seconds for the access token and 7,776,000 seconds (90 days) for the refresh token. 'Allow access only to APIs in selected scope' is on by default for new clients. Leave it on and add the APIs you need to the auth scope, or turn it off to make the client broadly scoped.",
+   "url": null,
+   "values": [
+    {
+     "label": "Access Token Lifespan (example)",
+     "value": "14400"
+    },
+    {
+     "label": "Refresh Token Lifespan (example)",
+     "value": "7776000"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Save and copy the Client ID and Client Secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Save the record. ServiceNow generates a Client ID and Client Secret; copy both to use in Composio.",
+   "url": null,
+   "values": [],
+   "est_time": "1 min",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Create the Composio auth config",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create an OAuth2 auth config for the servicenow toolkit (Composio has no managed app for it). Enter the Client ID, Client Secret, your instance subdomain and the scope useraccount. Composio builds the authorize URL (https://{subdomain}.service-now.com/oauth_auth.do) and the token URL (oauth_token.do) from the subdomain.",
+   "url": null,
+   "values": [
+    {
+     "label": "Scope",
+     "value": "useraccount"
+    },
+    {
+     "label": "Authorize URL",
+     "value": "https://{subdomain}.service-now.com/oauth_auth.do"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://{subdomain}.service-now.com/oauth_token.do"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection from Composio, log in to the instance, approve access, and make a simple API call such as reading an incident. If the call fails, check the Redirect URL and the auth scope settings first.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Endpoint behaviour was not probed during research, so treat this run as the first real check"
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Optionally restrict which APIs the client can reach",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Before other users connect, define the APIs the agent needs in the client's Auth Scope and in REST API Access Policies. Then decide whether to tick 'Enforce token restriction'. It is off by default, and when on, the access policy must be explicitly linked to the OAuth entity.",
+   "url": null,
+   "values": [],
+   "est_time": "15-30 min",
+   "gotchas": [
+    "If you tick 'Enforce token restriction' before defining REST API access policies, OAuth requests can fail"
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Let other users on the instance connect",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Share the Composio connect link with colleagues who have logins on the same instance. Each person authorizes with their own ServiceNow credentials, and their instance roles and ACLs control what the agent can do. No ServiceNow approval is needed.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "Repeat for each additional customer instance",
+   "owner": "you",
+   "gate": 3,
+   "detail": "OAuth endpoints and clients belong to one instance, so each other organization needs an admin on its instance to repeat steps 2-5. Then create a Composio auth config with that instance's Client ID, Secret and subdomain. An agent can draft the setup instructions you send to customer admins.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min per instance",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "(Optional) Prepare a ServiceNow Store submission",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Only needed if you want a Store listing. You need Build Partner status, a scoped application built on a non-PDI instance, a design document, a test plan with results, a customer-facing installation guide, plus marketing documentation and demo videos for the listing review. An agent can draft the documents, but you must handle partner enrollment and submit.",
+   "url": null,
+   "values": [],
+   "est_time": "Several days",
+   "gotchas": [
+    "Global-scope builds cannot be certified",
+    "Apps built on a PDI cannot be published",
+    "The certification team advises against apps with no business logic"
+   ],
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "title": "(Optional) Wait for Store certification",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "App review and listing review run as two tracks. ServiceNow estimates 3-5 weeks from a design-complete submission, and a third-party guide plans 5-8 weeks from build completion. Any later change to the code or listing must be recertified.",
+   "url": null,
+   "values": [],
+   "est_time": "3-8 weeks",
+   "gotchas": [],
+   "evidence_ids": [],
+   "support": "unsupported"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Admin access on the target ServiceNow instance",
+   "gate": 1,
+   "detail": "You can only create the OAuth client in the instance itself, through Application Registry or the Machine Identity Console.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "item": "Redirect URL set to the Composio callback",
+   "gate": 1,
+   "detail": "The Redirect URL on the registry record must be the client application's callback, not a ServiceNow URL.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "item": "Confidential client using the authorization-code grant",
+   "gate": 1,
+   "detail": "Client-credentials clients do not use a Redirect URL, so they will not work with Composio's user-facing flow.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "item": "Build Partner status (Store only)",
+   "gate": 3,
+   "detail": "You must be a Build Partner to list on the Store. Non-members can join the ServiceNow Partner Program.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "item": "Scoped app built on a non-PDI instance (Store only)",
+   "gate": 3,
+   "detail": "Global-scope apps cannot be certified, and PDIs cannot publish to the Store.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "item": "Certification documents (Store only)",
+   "gate": 3,
+   "detail": "Design document and test plan with results, both seen only by the certification team, plus a customer installation guide, marketing documentation and demo videos.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "useraccount",
+   "tier": "basic",
+   "effect": "Composio's default scope, also used in ServiceNow's own tutorial. It lets the token act as the authorizing user within that user's roles and ACLs. No provider review applies.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "scope": "Custom auth scopes (Tokyo+ / Machine Identity Console)",
+   "tier": "basic",
+   "effect": "An admin creates these on the instance and assigns them per integration. With 'Allow access only to APIs in selected scope' on (the default), the client can only call APIs included in its auth scope. No external review applies.",
+   "evidence_ids": [],
+   "support": "unsupported"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "OAuth API calls fail or are denied after the client is created",
+   "cause": "'Enforce token restriction' was ticked before REST API access policies were defined and linked to the OAuth entity, or the API is missing from the client's auth scope while 'Allow access only to APIs in selected scope' is on",
+   "fix": "Define REST API access policies and link them to the OAuth entity before enabling 'Enforce token restriction'. Then add the needed APIs to the auth scope, or make the client broadly scoped.",
+   "contact": null,
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "Connection breaks and the OAuth client is gone",
+   "cause": "The Personal Developer Instance was reclaimed after 10 days of inactivity",
+   "fix": "Use a company instance for anything long-lived, or keep the PDI active. If the client was lost, recreate it and update the Composio auth config.",
+   "contact": null,
+   "evidence_ids": [],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "Unable to publish the app to the ServiceNow Store",
+   "cause": "The app was built on a PDI or in global scope, or you do not have Build Partner status",
+   "fix": "Join the Partner Program and reach Build Partner status, then rebuild the app as a scoped app on a non-PDI instance.",
+   "contact": "ServiceNow Partner Program",
+   "evidence_ids": [],
+   "support": "unsupported"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "servicenow",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "useraccount"
+  ],
+  "note": "Composio has no managed OAuth app for ServiceNow, so you always bring your own client. ServiceNow OAuth runs per instance: create the client in the target instance's Application Registry or Machine Identity Console, register Composio's callback URL as its Redirect URL, and enter the Client ID, Secret and instance subdomain in the Composio auth config. ServiceNow does not review this client. Each additional customer instance needs its own client."
+ },
+ "evidence": [],
+ "open_questions": [
+  "Does Composio support one auth config across several customer instances, or does each instance need its own config with its own client credentials and subdomain?",
+  "Is PKCE supported on ServiceNow's OAuth provider? The findings did not confirm it.",
+  "What are the redirect URI matching rules (exact match vs. prefix, localhost)? Official docs were not confirmed.",
+  "What is the default refresh token lifespan, and does the authorization-code grant issue refresh tokens by default? Neither was confirmed.",
+  "Are there install caps, user caps or rate limits for unlisted OAuth clients? None were found.",
+  "That a developer connecting only their own instance needs no ServiceNow approval is inferred, not documented.",
+  "What do Technology/Build Partner Program membership costs and tier requirements look like? These were not confirmed from ServiceNow-owned pages."
+ ],
+ "slug": "servicenow_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T18:47:35+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "12 of 12 steps have no retrieved source",
+   "evidence lock: dropped 30 evidence ids the writer invented, restored 0 quotes it altered"
+  ],
+  "sources_consulted": 73,
+  "probes_run": 3,
+  "research_seconds": 195,
+  "est_cost_usd": 0.3686,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.1106,
+   "claude-opus-5-5": 0.258
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 20,
+    "out": 23447,
+    "cache_read": 619304,
+    "cache_write": 125895,
+    "search": 8
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 10048,
+    "cache_read": 0,
+    "cache_write": 11395,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

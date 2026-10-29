@@ -91,11 +91,14 @@ The eval and its caveats are described in [README § Evaluation](README.md). Row
 | v4 | Haiku → Haiku | gate | 0.87 ± 0.09 | 0.99* | 0.61 | 0.67 | $0.07 |
 | v5 | Haiku → Haiku | gate + plan + lock | 0.85 ± 0.08 | 0.82 | 0.59 | 0.67 | $0.09 |
 | v6 | Haiku → Opus | gate + plan + full lock | 0.91 ± 0.06 | 0.93 | 0.57 | 0.50 | $0.37 |
-| **v7 (shipped default)** | Haiku → Opus | gate + plan + quote-only lock | **0.88** ± 0.09 | **1.00** | **0.71** | 0.29 | **$0.40** |
+| **v7 (shipped default)** | Haiku → Opus | gate + plan + quote-only lock | **0.90** ± 0.08 | **1.00** | **0.70** | **0.24** | **$0.40** |
+| v8 | Haiku → Sonnet | gate + plan + quote-only lock | 0.83 ± 0.09 | 0.72 | 0.75 | 0.61 | $0.19 |
 
 \* v4's 0.99 is inflated: its writer invented 23% of its evidence (see finding 3).
 
-v7 has 14 of 18 runs: the API credit ran out on its 3 Notion runs and one HubSpot grading call. These are logged as infrastructure errors and not scored. On the same 5 apps, v6 vs v7 differs by **+0.12 quote support (better on all 5 apps)** and −0.02 key-fact recall (noise).
+**v7 is the most thoroughly tested setup:** all 6 reference apps × 3 runs, plus the 17 other apps once.
+- **Reference apps:** 17 of 18 runs produced a guide. The 18th is a recorded product failure, not a missing run: Haiku labelled a finding with a category the schema doesn't allow, three times in a row. Unknown category labels are now filed as "other" instead of aborting the run.
+- **The other 17 apps (no answer key):** v7 matches or beats all-Opus on every measure. Quotes support their claims 0.69 vs 0.65; steps sourced 1.00 vs 1.00; Composio managed status 15/15 vs 14/15; edge cases 3/3 vs 3/3. It costs $0.38 vs $0.85 per guide, and research never had to escalate.
 
 ### What we learned, in the order we learned it
 
@@ -118,11 +121,22 @@ v7 has 14 of 18 runs: the API credit ran out on its 3 Notion runs and one HubSpo
    - Against all-Opus: key-fact recall is level within noise (0.88 vs 0.92), evidence quality is better, and the cost is **55% lower** ($0.40 vs $0.89 per guide).
    - Most of the work, and nearly all the tokens read, run on the cheap model. The strong model is used only for judgement and writing, which is where every Haiku-writer setup measurably fell short.
 
+8. **Sonnet can't do the writing.** v8 halves the cost ($0.19) but states fewer key facts (0.83 vs 0.90) and judges difficulty as poorly as Haiku (0.61 vs 0.24).
+   - In 5 of 18 runs, Sonnet also **renamed every evidence ID**, so the lock correctly dropped all of that guide's evidence: 72% of steps sourced, against 100% for v7.
+   - Even on the 13 runs where it kept the IDs, recall was 0.82 and difficulty error 0.62. Fixing the renaming would restore the sources, not the judgement.
+9. **The judge was cross-checked with a second model.** All v7 and v8 reference guides were re-graded with Opus as the judge (`evals/regrade.py`):
+   - The two judges gave identical key-fact scores on **31 of 35 guides**, and all 35 were within one fact.
+   - Sonnet was never the more generous judge.
+   - Under Opus judging, v7 scores 0.94 and v8 0.84, so the v7 > v8 ordering isn't the Sonnet judge favouring Sonnet's writing.
+   - This is agreement between two models, not calibration against human grades.
+
 ### Smaller findings
 - The GitHub "miss" was correct grading. The guide labelled org-owner approval "inferred, not confirmed", because research had found it only on a forum.
 - OpenWeatherMap passed in every setup. My prediction that the 3-stage schema would force an invented OAuth flow was wrong.
 - Mercury failed only on the unsteered baseline: it picked the right product but never said which Mercury it chose.
 - Research never stalled, so escalation to Opus never fired (0 of 241 runs). The stall trigger is safe but untested in the wild.
+- **The live demo was tested through the real website,** not just the pipeline. A browser typed "Calendly", watched the live page stream 6 searches, 7 page reads and 4 probes, and landed on a finished guide in 168 s for $0.31.
+- **A screenshot of that run exposed a citation bug:** each claim numbered its own sources 1, 2, 3, so the numbers didn't match the Sources list. It's fixed, verified on 141 citations, and covered by a test.
 - The first live run found a tool-schema/function mismatch that crashed the whole run. It's fixed, with a test that checks every tool against its function.
 - Notion's difficulty disagrees with the reference across setups. It mirrors the open question in the curated guide, so the reference may be the uncertain part.
 
@@ -131,10 +145,9 @@ v7 has 14 of 18 runs: the API credit ran out on its 3 Notion runs and one HubSpo
 - n = 18 per setup gives a confidence interval of about ±0.06–0.12 on recall. The v6-vs-v1 difference is inside it, so "matches" means "not distinguishable at this sample size".
 - 3 of v1's 23 guides ran on slightly newer code (bug fixes, with the gate off).
 
-**Spend:** about $75 in total across all variants and grading (list-price estimates from token usage).
+**Spend:** about $91 in total. That's $87 across all eval runs and grading, $3 for the cross-judge check, and $0.31 for the live website test (list-price estimates from token usage).
 
 **Still open:**
-- v7's 3 Notion runs and one HubSpot regrade, about $1.50.
-- v7 on the 17 non-reference cases, about $7.
-- A Sonnet-writer variant: writing is the expensive half of v7.
-- A human pass over the 25-fact answer key.
+- A human pass over the 25-fact answer key. That's the remaining caveat on every score.
+- Hand-testing the curated guides in the provider consoles (checklist above).
+- Hardening the evidence lock against wholesale ID renaming: re-match renamed evidence to findings by URL and quote, so a renumbering writer keeps its sources while invented evidence is still dropped.

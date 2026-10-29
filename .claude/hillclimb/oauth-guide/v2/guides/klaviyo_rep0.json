@@ -1,0 +1,960 @@
+{
+ "app": {
+  "name": "Klaviyo OAuth app (for Composio)",
+  "website": "https://www.klaviyo.com",
+  "developer_portal_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+  "oauth_docs_url": "https://developers.klaviyo.com/en/docs/set_up_oauth",
+  "category": "Email/SMS marketing platform"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "Creating and testing your own Klaviyo OAuth app with your own account is quick, and you can share the installation URL with test customers without review. Listing the app in the Klaviyo marketplace needs 5 real customer installs with live API activity, a security assessment, and a review that Klaviyo may decline.",
+  "hands_on_effort": "About 1 hour for setup and your own test; several days to weeks of work to collect customer installs and complete listing forms (estimate, not documented)",
+  "time_to_first_connection": "About 30 minutes after you have an owner, admin, or manager role (estimate)",
+  "approval_wait": "Not documented by Klaviyo. Plan for at least one round of review feedback."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Own account (app created, not listed)",
+   "unlocks": "Create the app, connect and test with your own Klaviyo account. Only owner, admin, and manager roles can create OAuth apps.",
+   "limits": [
+    "Only owner, admin, or manager roles can create apps",
+    "Client secret cannot be viewed again after you save it; it can be regenerated",
+    "Authorization codes expire after about 5 minutes",
+    "Access tokens last about 1 hour"
+   ],
+   "time_to_reach": "Minutes to about 1 hour",
+   "requires_review": false,
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3",
+    "f12",
+    "f13"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Unlisted installation URL (invited customers and testers)",
+   "unlocks": "Share your installation URL with customers and testers without listing the app. They can install and use it.",
+   "limits": [
+    "Users see an OAuth install warning that the app has not been reviewed by Klaviyo",
+    "No user or install cap was found in the sources",
+    "Tokens are scoped per Klaviyo account; each merchant account installs separately",
+    "Each installed app instance gets its own rate limit quota"
+   ],
+   "time_to_reach": "As soon as the Gate 1 flow works end to end and the install URL starts OAuth directly",
+   "requires_review": false,
+   "evidence_ids": [
+    "f20",
+    "f21",
+    "f31",
+    "f32"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Klaviyo marketplace listing",
+   "unlocks": "Listing in the Klaviyo marketplace, so any Klaviyo user can find and install the app.",
+   "limits": [
+    "Requires at least 5 installs with demonstrated Production-level API activity from real customer accounts",
+    "Developer, company, and test accounts do not count",
+    "Klaviyo may decline to list any app for any reason",
+    "Private API keys are not allowed; apps still on API keys are delisted",
+    "Branded metric names cannot be changed after approval"
+   ],
+   "time_to_reach": "Not documented; depends on 5 real customer installs, the security assessment, and review feedback",
+   "requires_review": true,
+   "evidence_ids": [
+    "f17",
+    "f18",
+    "f19",
+    "f22",
+    "f24",
+    "f33",
+    "f38",
+    "f39"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Confirm your Klaviyo role",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Check that your Klaviyo account has the owner, admin, or manager role. Other roles cannot create OAuth apps.",
+   "url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Open Manage apps and create the app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Log in to Klaviyo and go to Integrations > Developers > Manage apps (klaviyo.com/manage-apps). Click Create app and enter a name.",
+   "url": "https://www.klaviyo.com/manage-apps",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Manage apps redirects to a login page if you are not logged in."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Enter the redirect URL",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the app and set its redirect URLs. Paste the Composio callback URL from your Composio auth config. Separate multiple URLs with a space, tab, or newline. These are the only URLs Klaviyo will redirect to after authorization.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "The sources disagree on the Composio callback path (v1 auth-apps/add vs v3 toolkits/auth/callback). Confirm it in Composio before saving."
+   ],
+   "evidence_ids": [
+    "f8",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set the scopes to the minimum your integration uses",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Enter scopes as a space-separated list. Keep accounts:read, which is required. Add only the scopes your integration actually calls. Do not paste Composio's full default list, because unused scopes get the app rejected.",
+   "url": null,
+   "values": [
+    {
+     "label": "Scopes",
+     "value": "accounts:read plus only the scopes your integration calls (space-separated)"
+    }
+   ],
+   "est_time": "20-40 min",
+   "gotchas": [
+    "Testing with Postman needs events:read and events:write.",
+    "Reviewers check each scope against the endpoints you list in the testing instructions."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7",
+    "f28",
+    "f37"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save and copy the client ID and client secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Save the app. Copy the client ID and client secret immediately. The secret cannot be viewed again; if you lose it, regenerate it and update Composio.",
+   "url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "Save the secret in a secrets manager at once."
+   ],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Enter the Klaviyo credentials in Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In your Composio auth config for the klaviyo toolkit, choose your own OAuth app (not managed auth). Enter the client ID, client secret, and the scope list you trimmed in the previous step.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorize URL",
+     "value": "https://www.klaviyo.com/oauth/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://a.klaviyo.com/oauth/token"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "Composio's default scope list is broader than what you need. Replace it."
+   ],
+   "evidence_ids": [
+    "f40"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Verify the PKCE and token exchange",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Check that the authorization request includes a PKCE code challenge using S256 and a state value that changes per user. Check that the token exchange sends client credentials as Basic auth, uses a form-encoded body, and includes the code verifier and grant_type authorization_code.",
+   "url": "https://developers.klaviyo.com/en/v2023-10-15/docs/set-up-oauth",
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "Community guides may predate the current OAuth 2.1 requirement. Use the official docs as the reference."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f11",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the installation URL and approve the app with your own Klaviyo account. Finish the authorization within about 5 minutes of the code being issued. Confirm that the access and refresh tokens are stored and that the refresh token is replaced with the new one after each refresh.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "An install attempted after the authorization code expires fails with a session-invalid error.",
+    "Refresh tokens rotate on every use. Storing an old refresh token will break the connection on the next refresh."
+   ],
+   "evidence_ids": [
+    "f12",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Build disconnect, denial, and uninstall handling",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Add a disconnect action that revokes the user's refresh token. Handle the case where the user denies authorization. Handle uninstall from Klaviyo so the app reflects it. Remove any remaining API-key connection.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [
+    "Common review failures include no disconnect UI and no handling of denial."
+   ],
+   "evidence_ids": [
+    "f16",
+    "f26",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Test the installation URL from klaviyo.com and a subdomain",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Install the app from klaviyo.com and from a klaviyo.com subdomain. Confirm that the installation URL starts OAuth directly and does not redirect to a website first. Also confirm that installing from the Klaviyo listing works without redirects elsewhere.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "An install URL that redirects to a website instead of starting OAuth is a common review failure."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f15",
+    "f29",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Share the installation URL with test customers",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Give your installation URL to invited customers and testers. They will see an unreviewed-app warning but can install and use the app. Use real customer accounts where you can, because test accounts do not count toward listing.",
+   "url": null,
+   "values": [],
+   "est_time": "Ongoing",
+   "gotchas": [
+    "No user or install cap was found in the sources. Confirm limits in Klaviyo before you invite a large group."
+   ],
+   "evidence_ids": [
+    "f19",
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Draft the listing and testing instructions",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Draft 2-6 key features (titles up to 65 characters, descriptions up to 225). Draft 1-4 linked articles including one user guide (titles up to 100 characters). Set a settings URL that points to a Klaviyo-specific integration settings page. Draft testing instructions that list each scope with the endpoints it covers and the use case.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [
+    "Scopes that do not match the submission cause failure."
+   ],
+   "evidence_ids": [
+    "f23",
+    "f25",
+    "f27",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Collect 5 real customer installs with live API activity",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Get at least 5 installs from real customer accounts that make live API calls at Production level. Developer, company, and test accounts do not count.",
+   "url": null,
+   "values": [],
+   "est_time": "Weeks (depends on customers)",
+   "gotchas": [
+    "Installs are gathered by sharing the installation URL."
+   ],
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Complete the security assessment and submit",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Complete the security assessment form and the registration forms. Confirm the OAuth setup and link the testing instructions. Then go to Integrations > Developers > Manage apps, click your app name, and click Review submission.",
+   "url": "https://academy.klaviyo.com/en-us/courses/build-an-oauth-app-with-klaviyo/lessons/submit-and-monitor-your-app",
+   "values": [],
+   "est_time": "1-3 days (estimate)",
+   "gotchas": [
+    "Address feedback from the Security and Trust team before resubmitting."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f23",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for review and respond to feedback",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Klaviyo reviews the submission and may decline to list it for any reason. Plan for at least one round of feedback. After approval, app metrics use your logo and branded metric names cannot be changed.",
+   "url": null,
+   "values": [],
+   "est_time": "Not documented",
+   "gotchas": [
+    "No review turnaround time was found in Klaviyo's pages."
+   ],
+   "evidence_ids": [
+    "f22",
+    "f33",
+    "f38"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Owner, admin, or manager role to create the app",
+   "gate": 1,
+   "detail": "Only these roles can create OAuth apps in Klaviyo.",
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "PKCE with S256 on the authorization request",
+   "gate": 1,
+   "detail": "Klaviyo requires PKCE and uses OAuth 2.1. Composio's flow must send a code challenge.",
+   "evidence_ids": [
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Least permissive scope set",
+   "gate": 2,
+   "detail": "Request only the scopes your integration calls. Apps requesting more scopes than necessary are rejected.",
+   "evidence_ids": [
+    "f6",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "accounts:read in the scope list",
+   "gate": 1,
+   "detail": "accounts:read is required by default and must stay in the list.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Installation URL kicks off OAuth directly",
+   "gate": 2,
+   "detail": "The install URL must start OAuth with code challenge and per-user state, not redirect to a website.",
+   "evidence_ids": [
+    "f30",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Installable from klaviyo.com and its subdomains",
+   "gate": 3,
+   "detail": "Apps with an install flow only on their own platform are rejected.",
+   "evidence_ids": [
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Disconnect, denial, and uninstall handling",
+   "gate": 3,
+   "detail": "Apps must revoke the refresh token on disconnect, handle denial and errors, and reflect uninstall from Klaviyo.",
+   "evidence_ids": [
+    "f16",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "No API-key connections",
+   "gate": 3,
+   "detail": "Apps still on private API keys are delisted and cannot be listed.",
+   "evidence_ids": [
+    "f17",
+    "f29",
+    "f39"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "5 installs with production API activity",
+   "gate": 3,
+   "detail": "Real customer accounts only; developer, company, and test accounts do not count.",
+   "evidence_ids": [
+    "f18",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Security assessment form",
+   "gate": 3,
+   "detail": "Complete the form and address feedback from the Security and Trust team.",
+   "evidence_ids": [
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Listing content: 2-6 key features and 1-4 linked articles including a user guide",
+   "gate": 3,
+   "detail": "Feature titles up to 65 characters, descriptions up to 225; article titles up to 100 characters.",
+   "evidence_ids": [
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Klaviyo-specific settings URL",
+   "gate": 3,
+   "detail": "The settings URL must point to a Klaviyo-specific integration settings page for the app.",
+   "evidence_ids": [
+    "f27"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "accounts:read",
+   "tier": "unknown",
+   "effect": "Required by default and must remain in the list.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "events:read and events:write",
+   "tier": "unknown",
+   "effect": "Needed for Postman testing. Include them only if your integration or testing uses them, since unused scopes get the app flagged.",
+   "evidence_ids": [
+    "f37",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Composio default list (about 34 read/write scopes)",
+   "tier": "unknown",
+   "effect": "Too broad for Klaviyo's least-permissive rule. Trim to the endpoints your integration calls before submitting. Reviewers flag unused scopes.",
+   "evidence_ids": [
+    "f6",
+    "f28"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "App is delisted or cannot be listed while it still uses a private API key connection.",
+   "cause": "Klaviyo allows only OAuth apps in its listing. Private-key (API key) connections are not allowed.",
+   "fix": "Migrate every customer connection to OAuth and remove API-key connections before submitting.",
+   "contact": null,
+   "evidence_ids": [
+    "f17",
+    "f29",
+    "f39"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Listing submission cannot proceed; the app does not meet the install requirement.",
+   "cause": "Klaviyo requires at least 5 installs with live Production-level API activity from real customer accounts. Test, developer, and company accounts do not count.",
+   "fix": "Share the installation URL with real customers, and wait until 5 accounts show live API activity before submitting.",
+   "contact": null,
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Review rejects the app for requesting more scopes than necessary.",
+   "cause": "The scope list is copied from Composio's default, which is broader than the endpoints the integration calls.",
+   "fix": "Trim the scope list to the endpoints you call, and list each scope with its endpoints in the testing instructions.",
+   "contact": null,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Review fails on the install flow: the installation URL redirects to a website.",
+   "cause": "The installation URL does not start OAuth directly, or install does not work from klaviyo.com subdomains.",
+   "fix": "Make the installation URL begin the OAuth flow with a code challenge and per-user state. Test installs from klaviyo.com and a subdomain.",
+   "contact": null,
+   "evidence_ids": [
+    "f29",
+    "f30",
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Submission is held on the security assessment.",
+   "cause": "The security assessment form is incomplete, or Security and Trust feedback is not yet addressed.",
+   "fix": "Complete the security assessment form and resolve each item of Security and Trust feedback before resubmitting.",
+   "contact": null,
+   "evidence_ids": [
+    "f24"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "klaviyo",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "accounts:read",
+   "campaigns:read",
+   "campaigns:write",
+   "conversations:read",
+   "conversations:write",
+   "catalogs:read",
+   "catalogs:write",
+   "coupons:read",
+   "coupons:write",
+   "coupon-codes:read",
+   "coupon-codes:write",
+   "data-privacy:read",
+   "data-privacy:write",
+   "events:read",
+   "events:write",
+   "flows:read",
+   "flows:write",
+   "images:read",
+   "images:write",
+   "lists:read",
+   "lists:write",
+   "metrics:read",
+   "metrics:write",
+   "profiles:read",
+   "profiles:write",
+   "push-tokens:read",
+   "push-tokens:write",
+   "segments:read",
+   "segments:write",
+   "subscriptions:read",
+   "subscriptions:write",
+   "tags:read",
+   "tags:write",
+   "templates:read",
+   "templates:write"
+  ],
+  "note": "Composio's managed OAuth app is not available for Klaviyo, so you must register your own Klaviyo OAuth app and enter its client ID and client secret in Composio. Do not keep Composio's default scope list: Klaviyo expects the least permissive scope set, so request only the scopes your integration calls. Authorize URL: https://www.klaviyo.com/oauth/authorize. Token URL: https://a.klaviyo.com/oauth/token. Confirm the exact Composio callback URL in Composio's own setup before you register it, because the sources disagree on the path."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Only owner, admin, and manager roles can create OAuth apps in Klaviyo.",
+   "source_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "quote": "only owner, admin, and manager roles can create OAuth apps in Klaviyo",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Create the app from Manage apps, then save the client ID and client secret; the secret cannot be viewed again (it can be regenerated).",
+   "source_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "quote": "securely save your client secret and client ID. You won’t be able to view your client secret again",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Manage apps is at klaviyo.com/manage-apps and requires a logged-in Klaviyo account.",
+   "source_url": "https://www.klaviyo.com/manage-apps",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "In the Klaviyo UI the path is Integrations > Developers > Manage apps, then click the app name and Review submission.",
+   "source_url": "https://academy.klaviyo.com/en-us/courses/build-an-oauth-app-with-klaviyo/lessons/submit-and-monitor-your-app",
+   "quote": "navigate to Integrations > Developers > Manage apps, click on your app name, and click Review submission",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Scopes are a space-separated list; accounts:read is required by default and must stay in the list.",
+   "source_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "quote": "Note that accounts:read is required by default and must remain in your scopes list.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Klaviyo expects the least permissive scope set; requesting more scopes than necessary is a listing failure.",
+   "source_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "quote": "you must use the least permissive scope set possible. Do not request more scopes than necessary.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "If an app requests more scope permissions than necessary, it will be rejected.",
+   "source_url": "https://developers.klaviyo.com/en/docs/set_up_oauth",
+   "quote": "If your app requests more scope permissions than necessary, it will be rejected.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Redirect URLs are the allowlisted redirect targets; multiple URLs are separated by space, tab, or newline.",
+   "source_url": "https://developers.klaviyo.com/en/docs/create_a_public_oauth_app",
+   "quote": "These are the URLs that you have allowlisted Klaviyo to redirect users to after authorizing your app.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Klaviyo requires PKCE on the authorization request, recommended for public and confidential clients.",
+   "source_url": "https://developers.klaviyo.com/en/v2023-10-15/docs/set-up-oauth",
+   "quote": "Klaviyo requires PKCE. It is recommended for all OAuth client types public and confidential.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Klaviyo apps use OAuth 2.1, which extends OAuth 2.0 with PKCE.",
+   "source_url": "https://academy.klaviyo.com/en-us/courses/build-an-oauth-app-with-klaviyo/lessons/set-up-your-oauth-flow",
+   "quote": "Klaviyo apps are authorized with OAuth 2.1, which extends OAuth 2.0's security measures with Proof Key for Code Exchange (PKCE).",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Token exchange authenticates with client credentials via Basic auth and a form-encoded body including the code verifier.",
+   "source_url": "https://academy.klaviyo.com/en-us/courses/build-an-oauth-app-with-klaviyo/lessons/set-up-your-oauth-flow",
+   "quote": "Authenticate this server-side API with your encoded client_id and client_secret.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Access tokens last about 1 hour; refresh tokens are long-lived but rotate on every use.",
+   "source_url": "https://developers.klaviyo.com/en/docs/guide_to_integrating_a_forms_and_popups_platform",
+   "quote": "Access tokens are short-lived (1 hour). Refresh tokens are long-lived but rotate on every use.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Authorization codes expire after about 5 minutes; an install after expiry fails with a session-invalid error.",
+   "source_url": "https://developers.klaviyo.com/en/docs/handle_your_apps_oauth_flow",
+   "quote": "after the authorization code has expired (after 5 minutes)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Installation must work from both klaviyo.com and any subdomain of klaviyo.com.",
+   "source_url": "https://developers.klaviyo.com/en/docs/handle_your_apps_oauth_flow",
+   "quote": "Users must be able to successfully install your OAuth app from both klaviyo.com and any subdomain of klaviyo.com.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Users installing from Klaviyo should not be redirected elsewhere to start the installation flow.",
+   "source_url": "https://developers.klaviyo.com/en/docs/handle_your_apps_oauth_flow",
+   "quote": "Users installing your app from Klaviyo should not be redirected elsewhere to initiate the installation flow.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Apps must support disconnect from inside the app by revoking the refresh token, and must reflect uninstall from Klaviyo.",
+   "source_url": "https://developers.klaviyo.com/en/docs/handle_your_apps_oauth_flow",
+   "quote": "your app should make an API call to revoke the refresh token for the user",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Only OAuth apps can be listed; apps still on private API keys are delisted.",
+   "source_url": "https://developers.klaviyo.com/en/docs/migrate_to_oauth_from_private_key_authentication",
+   "quote": "Your app will be delisted if you do not upgrade to OAuth.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Listing requires at least 5 installs with demonstrated Production-level API activity; developer and company accounts do not count.",
+   "source_url": "https://developers.klaviyo.com/en/docs/klaviyo_app_listing_requirements",
+   "quote": "Your app must have at least 5 installs with demonstrated Production level API activity.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Submission requires 5 active customer installs with live API activity; test accounts do not qualify.",
+   "source_url": "https://developers.klaviyo.com/en/docs/submit_your_app_for_review",
+   "quote": "These must be real customer accounts with live API activity—test accounts do not qualify.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "The app does not have to be listed to share and use its installation URL with customers.",
+   "source_url": "https://developers.klaviyo.com/en/docs/set_up_oauth",
+   "quote": "Your app does not have to be listed to share and use your installation URL with customers.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Until approved, users see an OAuth install warning that the app has not been reviewed, but customers and testers can still install and use it.",
+   "source_url": "https://developers.klaviyo.com/en/docs/submit_your_app_for_review",
+   "quote": "users will receive an OAuth installation warning that your app has not been reviewed by Klaviyo",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Klaviyo reserves the right not to list any app for any reason, so approval is not guaranteed.",
+   "source_url": "https://developers.klaviyo.com/en/docs/submit_your_app_for_review",
+   "quote": "Klaviyo reserves the right to not list your app for any reason.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Submission confirms OAuth setup with a link to testing instructions, plus company and application details.",
+   "source_url": "https://academy.klaviyo.com/en-us/courses/build-an-oauth-app-with-klaviyo/lessons/submit-and-monitor-your-app",
+   "quote": "Authentication: confirm OAuth setup and include a link to testing instructions.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Submission requires a completed security assessment form and responsiveness to Security and Trust feedback.",
+   "source_url": "https://developers.klaviyo.com/en/docs/migrate_to_oauth_from_private_key_authentication",
+   "quote": "Complete the security assessment form and address feedback from our Security and Trust team.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Listing requires 2-6 key features (titles up to 65 characters, descriptions up to 225) and 1-4 linked articles including a user guide.",
+   "source_url": "https://developers.klaviyo.com/en/docs/klaviyo_app_listing_requirements",
+   "quote": "Your app listing describes 2-6 key features.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Listing requires the app to fully handle installation, uninstallation, and error scenarios in its OAuth flow.",
+   "source_url": "https://developers.klaviyo.com/en/docs/klaviyo_app_listing_requirements",
+   "quote": "Your app fully handles installation, uninstallation, and error scenarios in its OAuth flow.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "The app's settings URL must go to a Klaviyo-specific integration settings page.",
+   "source_url": "https://developers.klaviyo.com/en/docs/klaviyo_app_listing_requirements",
+   "quote": "Your app’s settings URL directs to a Klaviyo specific integration settings page for your app.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Reviewers flag unused scopes; testing instructions must list each scope with its endpoints and use cases.",
+   "source_url": "https://developers.klaviyo.com/en/docs/pass_your_app_review",
+   "quote": "Include the specific endpoints your app calls along with the scope needed.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Common review failures include an install URL that redirects to a website, requesting all scopes, not handling denial, missing disconnect UI, and an API-key connection still active.",
+   "source_url": "https://developers.klaviyo.com/en/docs/pass_your_app_review",
+   "quote": "Your app must no longer support any API key-based connections.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "The installation URL must kick off the OAuth flow directly, with code challenge and state updated per user.",
+   "source_url": "https://developers.klaviyo.com/en/docs/pass_your_app_review",
+   "quote": "The installation URL must kick off the OAuth flow directly.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "OAuth apps get their own rate limit quota per installed app instance (per account per app).",
+   "source_url": "https://developers.klaviyo.com/en/docs/handle_your_apps_oauth_flow",
+   "quote": "Receive their own rate limit quota per installed app instance (i.e., per account per app).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Tokens are scoped per Klaviyo account; merchants with multiple accounts install separately for each.",
+   "source_url": "https://developers.klaviyo.com/en/docs/guide_to_integrating_a_forms_and_popups_platform",
+   "quote": "Tokens are scoped per Klaviyo account.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "After approval, app metrics use the app's logo, and branded metric names cannot be changed later.",
+   "source_url": "https://developers.klaviyo.com/en/docs/pass_your_app_review",
+   "quote": "After your app is approved, its metrics will use your app's logo.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Postman testing requires the app to have events:read and events:write scopes.",
+   "source_url": "https://developers.klaviyo.com/en/docs/set_up_oauth",
+   "quote": "Your app must have events:read and events:write scopes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "Klaviyo's category guides expect a review round; the reviews guide says to plan for at least one round of feedback.",
+   "source_url": "https://developers.klaviyo.com/en/docs/guide_to_integrating_a_reviews_platform",
+   "quote": "Plan for at least one round of feedback.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "Private API keys are described as a non-starter for the marketplace.",
+   "source_url": "https://developers.klaviyo.com/en/docs/guide_to_integrating_a_reviews_platform",
+   "quote": "Private API keys are a non-starter for the marketplace.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f40",
+   "claim": "Composio's toolkit record for Klaviyo lists an OAUTH2 auth config with the Klaviyo authorization and token URLs.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/klaviyo",
+   "quote": "authorization_url: https://www.klaviyo.com/oauth/authorize, token_url: https://a.klaviyo.com/oauth/token",
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Refresh-token lifetime and expiry are not documented; only the 1-hour access token and rotation on each use were found.",
+  "No review turnaround time was found in Klaviyo's pages.",
+  "No user or install cap for unlisted installs was found. Confirm before inviting a large group.",
+  "No account prerequisites were documented beyond the owner, admin, or manager role: no paid plan, partner program, business verification, or review fee.",
+  "Whether the listing review requires domain verification, specific logo sizes, or a demo video was not found.",
+  "The Composio callback URL to allowlist is inconsistent between the toolkit record (v1 auth-apps/add) and the probe (v3 path). Confirm it in Composio before registering.",
+  "Client ID validation at the Klaviyo authorize endpoint could not be observed, because the probe redirected to a login page.",
+  "The Klaviyo docs fetched were version v2023-10-15 and related pages; some community guides may be outdated."
+ ],
+ "slug": "klaviyo_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:02:20+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 26,
+  "probes_run": 3,
+  "research_seconds": 107,
+  "est_cost_usd": 0.0432,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0432
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 16,
+    "out": 25335,
+    "cache_read": 130924,
+    "cache_write": 79273,
+    "search": 2
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

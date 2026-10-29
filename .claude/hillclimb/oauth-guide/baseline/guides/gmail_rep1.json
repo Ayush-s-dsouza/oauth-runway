@@ -1,0 +1,884 @@
+{
+ "app": {
+  "name": "Gmail (Google Gmail API)",
+  "website": "https://developers.google.com/workspace/gmail/api",
+  "developer_portal_url": "https://console.cloud.google.com/apis/credentials",
+  "oauth_docs_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+  "category": "Email"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "You can create a Google OAuth client and connect your own Gmail account in minutes. Public use with any read/modify Gmail scope (including Composio's default https://mail.google.com/) needs Google verification plus a yearly third-party CASA security assessment, which takes weeks to months. An app that only sends mail (gmail.send, a sensitive scope) still needs verification but avoids CASA.",
+  "hands_on_effort": "30-60 min for Gates 1-2; several days of work for Gate 3 (domain verification, privacy policy, demo video, CASA questionnaire and fixes)",
+  "time_to_first_connection": "15-30 min",
+  "approval_wait": "Several weeks for restricted scopes (community reports say 4-6 weeks), and Google says some verification can take several months; CASA is extra"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Testing publishing status (your own account)",
+   "unlocks": "You connect your own Google account through your own OAuth client, with any Gmail scope, no review.",
+   "limits": [
+    "Users see the unverified-app screen when sensitive or restricted scopes are requested",
+    "Refresh tokens reportedly expire after about 7 days in External + Testing status (community report, not confirmed by Google)"
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f19",
+    "f24"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Testing status / unverified app with known test users",
+   "unlocks": "A small group of known users (teammates, testers) can authorize the app without verification. Google exempts development/testing projects and personal use by a few known users from verification.",
+   "limits": [
+    "An unverified app is capped at 100 new users in total once it shows the unverified-app screen",
+    "Unverified-app warning screen shown to every user",
+    "Refresh tokens reportedly expire about 7 days after issue in Testing status (community)",
+    "Reportedly a limit of 100 live refresh tokens per Google Account per client ID (community)"
+   ],
+   "time_to_reach": "Same day",
+   "requires_review": false,
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f20",
+    "f24",
+    "f27"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production status + verified app (brand verification, data access review, CASA for restricted scopes)",
+   "unlocks": "Anyone with a Google account can connect, with no unverified-app screen and no 100-user cap. Refresh tokens stay valid until revoked.",
+   "limits": [
+    "Restricted scopes (gmail.readonly, gmail.modify, gmail.compose, mail.google.com, etc.) need a yearly security assessment by a Google-approved third party (CASA) if data is stored on or sent through servers",
+    "Adding redirect URIs/JS origins, changing the product name, or adding scopes may mean verifying again"
+   ],
+   "time_to_reach": "Several weeks to several months",
+   "requires_review": true,
+   "evidence_ids": [
+    "f10",
+    "f11",
+    "f12",
+    "f20",
+    "f22",
+    "f23",
+    "f25",
+    "f26",
+    "f28",
+    "f29",
+    "f37"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Sign in and create a Google Cloud project",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in to the Google Cloud console with a Google account and create a new project for this integration. The Credentials page sits behind a Google sign-in.",
+   "url": "https://console.cloud.google.com/apis/credentials",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5",
+    "f6"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Enable the Gmail API",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the project, open APIs & Services > Library, search for Gmail API and click Enable.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Pick the smallest Gmail scope set",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "List the Gmail actions your agent actually needs and map them to the smallest scopes. Send-only apps should use gmail.send (sensitive) and not mail.google.com or gmail.readonly/modify (restricted). Composio's default set includes https://mail.google.com/, which brings in the full restricted-scope review.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Google says to request mail.google.com only if you need to immediately and permanently delete messages.",
+    "Read plus send spans both review tiers (sensitive and restricted)."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f8",
+    "f9",
+    "f33",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Configure the OAuth consent screen",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Under APIs & Services, set up the OAuth consent screen: user type External, app name, user support email, developer contact email and a privacy policy URL. Add exactly the scopes from the previous step. Leave publishing status as Testing for now.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "The scopes requested in code (your Composio auth config) must match the consent screen, or users see the unverified-app screen.",
+    "Google's Trust & Safety team sends review questions to the support and developer contact emails, so use inboxes someone checks."
+   ],
+   "evidence_ids": [
+    "f17",
+    "f21",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create the OAuth client ID",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Go to Credentials > Create credentials > OAuth client ID, choose application type Web application, and add the redirect URI. Copy the client ID and client secret.",
+   "url": "https://console.cloud.google.com/apis/credentials",
+   "values": [
+    {
+     "label": "Application type",
+     "value": "Web application"
+    },
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Set the final redirect URI now. Adding redirect URIs after verification means verifying again."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f22"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Add the credentials to Composio and test-connect your account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Create a Gmail auth config in Composio that uses your own client ID and secret and the same scopes as the consent screen, then run a test authorization with your own Google account. Make sure offline access is requested so a refresh token is issued and stored.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "If you get no refresh token on re-consent, force the consent prompt (approval_prompt=force / prompt=consent)."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f3",
+    "f7"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Invite test users",
+   "owner": "you",
+   "gate": 2,
+   "detail": "While in Testing, let a small number of known testers authorize the app. They will see the unverified-app screen. Expect to reconnect about weekly if refresh tokens expire after 7 days in Testing.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Hard cap of 100 new users in total for an unverified app.",
+    "The 7-day token expiry comes from community reports, not from Google."
+   ],
+   "evidence_ids": [
+    "f18",
+    "f20",
+    "f24",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Publish a home page and privacy policy on a verified domain",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Draft a public home page that clearly describes the app, and a privacy policy on the same domain that explains how Google user data is used, stored and shared. Then verify domain ownership in Google Search Console (a project owner or editor must do the Search Console verification) and add it as an authorized domain.",
+   "url": null,
+   "values": [],
+   "est_time": "2-4 hours",
+   "gotchas": [
+    "A Play Store listing or Facebook page is not accepted as a home page.",
+    "Search Console verification must be done by a project owner or editor (a 'you' action)."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f14",
+    "f15",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Record the demo video",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Record the full grant flow: the consent screen showing the app name and client ID, then how each sensitive or restricted scope is used in the app. Upload it to YouTube Studio with Visibility set to Unlisted.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Switch to Production and submit for verification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "In the OAuth consent screen, change the publishing status to Production and submit for verification with your scope justifications and the video link. An agent can draft the justification text, but the status switch can only be made in the console UI.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f25b",
+    "f37"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for brand verification and data access review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Google first runs brand verification (domains, branding), then reviews data access for sensitive/restricted scopes. Answer Trust & Safety emails quickly.",
+   "url": null,
+   "values": [],
+   "est_time": "Several weeks to several months",
+   "gotchas": [
+    "Compliant brand verification results are valid for only 7 days, so submit promptly after passing."
+   ],
+   "evidence_ids": [
+    "f15",
+    "f17",
+    "f28",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Complete the CASA security assessment (restricted scopes only)",
+   "owner": "you",
+   "gate": 3,
+   "detail": "If you request restricted Gmail scopes and store or send that data through servers, get a security assessment from a Google-approved App Defense Alliance lab under the CASA framework. Budget time for fixes. Cost is unclear, with community estimates from about $500 to $75,000.",
+   "url": null,
+   "values": [],
+   "est_time": "Days of work plus lab turnaround",
+   "gotchas": [],
+   "evidence_ids": [
+    "f10",
+    "f11",
+    "f12",
+    "f30",
+    "f32",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Keep verification current",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Renew the CASA assessment every year, and avoid changing the client, product name, redirect URIs or scopes without planning for re-verification.",
+   "url": null,
+   "values": [],
+   "est_time": "Ongoing",
+   "gotchas": [
+    "Community reports say a missed renewal can lead to production access being revoked."
+   ],
+   "evidence_ids": [
+    "f11",
+    "f22",
+    "f23",
+    "f31"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Google account with access to the Cloud console",
+   "gate": 1,
+   "detail": "Needed to create the project and OAuth client.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "Privacy policy URL on the consent screen",
+   "gate": 1,
+   "detail": "Required on the consent screen. For verification it must be on the same domain as the home page and must disclose how Google user data is used, stored and shared.",
+   "evidence_ids": [
+    "f13",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Public home page relevant to the app",
+   "gate": 3,
+   "detail": "Must be publicly accessible. App-store or social pages are not accepted.",
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Authorized domains verified in Search Console",
+   "gate": 3,
+   "detail": "Checked during brand verification, and verified by a project owner or editor.",
+   "evidence_ids": [
+    "f15",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Unlisted YouTube demo video",
+   "gate": 3,
+   "detail": "Shows the consent flow with app name and client ID, and how each sensitive/restricted scope is used.",
+   "evidence_ids": [
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Annual CASA security assessment",
+   "gate": 3,
+   "detail": "Required for restricted scopes when data is stored on or sent through servers.",
+   "evidence_ids": [
+    "f10",
+    "f11",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Compliance with Google Workspace user data policy",
+   "gate": 3,
+   "detail": "This is the policy that governs Gmail API access.",
+   "evidence_ids": [
+    "f38"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "https://mail.google.com/",
+   "tier": "restricted",
+   "effect": "Full mailbox access, and in Composio's default set. Triggers restricted-scope verification and CASA. Google says to use it only when you need immediate permanent deletion.",
+   "evidence_ids": [
+    "f2",
+    "f9",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "https://www.googleapis.com/auth/gmail.readonly / gmail.modify / gmail.compose / gmail.insert / gmail.metadata / gmail.settings.basic",
+   "tier": "restricted",
+   "effect": "Restricted-scope verification plus a yearly CASA assessment if data passes through servers.",
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "https://www.googleapis.com/auth/gmail.settings.sharing",
+   "tier": "restricted",
+   "effect": "Restricted, and for admin use only.",
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "https://www.googleapis.com/auth/gmail.send",
+   "tier": "sensitive",
+   "effect": "Needs OAuth app verification but not CASA. The best choice for send-only agents.",
+   "evidence_ids": [
+    "f8",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "userinfo.email / userinfo.profile",
+   "tier": "basic",
+   "effect": "Profile scopes in Composio's default set. No extra Gmail review is documented in the findings.",
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Users see 'Google hasn't verified this app' and new sign-ups stop after 100 users",
+   "cause": "The app is unverified and requests sensitive/restricted scopes.",
+   "fix": "Complete verification (Gate 3). Also make sure the scopes in code match the consent screen.",
+   "contact": null,
+   "evidence_ids": [
+    "f20",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Connections break with invalid_grant about a week after authorizing",
+   "cause": "Reported 7-day refresh-token expiry for External apps in Testing status.",
+   "fix": "Move to Production status (and verify). Until then, reconnect test users.",
+   "contact": null,
+   "evidence_ids": [
+    "f24",
+    "f25",
+    "f26"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Verification required again after a small config change",
+   "cause": "Adding redirect URIs/JS origins, renaming the product, changing the client or adding scopes after verification.",
+   "fix": "Lock the redirect URI, name and scope list before submitting.",
+   "contact": null,
+   "evidence_ids": [
+    "f22",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Verification blocked pending a security assessment",
+   "cause": "Restricted Gmail scopes with data stored on or sent through servers need CASA.",
+   "fix": "Narrow to sensitive scopes such as gmail.send if possible. Otherwise engage an App Defense Alliance-approved lab.",
+   "contact": null,
+   "evidence_ids": [
+    "f10",
+    "f12",
+    "f34",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Older connections for one user stop working",
+   "cause": "Reported limit of 100 live refresh tokens per Google Account per client ID.",
+   "fix": "Reuse stored refresh tokens and don't re-authorize repeatedly.",
+   "contact": null,
+   "evidence_ids": [
+    "f7",
+    "f27"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "gmail",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "https://www.googleapis.com/auth/userinfo.profile",
+   "https://www.googleapis.com/auth/userinfo.email",
+   "https://www.googleapis.com/auth/contacts.readonly",
+   "https://www.googleapis.com/auth/contacts.other.readonly",
+   "https://www.googleapis.com/auth/profile.language.read",
+   "https://www.googleapis.com/auth/user.addresses.read",
+   "https://www.googleapis.com/auth/user.birthday.read",
+   "https://www.googleapis.com/auth/user.emails.read",
+   "https://www.googleapis.com/auth/user.phonenumbers.read",
+   "https://www.googleapis.com/auth/profile.emails.read",
+   "https://mail.google.com/"
+  ],
+  "note": "Start on Composio's managed Gmail OAuth to prototype without a Google app. Switch to your own Google OAuth client when you need your own branding on the consent screen or a public launch under your own verification. Composio's default scopes include the restricted https://mail.google.com/ scope, so if you copy them, plan for restricted-scope verification and CASA. Trim to the smallest scopes you need (e.g. gmail.send only) to lower the review burden."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio offers managed OAuth for Gmail (OAUTH2 mode) with Google's standard endpoints.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/gmail",
+   "quote": "\"managed_oauth_available\": true",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Composio's default Gmail scope set includes the full-access https://mail.google.com/ scope alongside profile, email and contacts scopes.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/gmail",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Google's OpenID discovery document advertises S256 and plain PKCE methods.",
+   "source_url": "https://accounts.google.com/.well-known/openid-configuration",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Google's authorize endpoint rejects an unknown client_id, so a real OAuth client ID must be registered.",
+   "source_url": "https://accounts.google.com/o/oauth2/v2/auth",
+   "quote": "The OAuth client was not found.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "The OAuth client is created in the Google Cloud console: project, Gmail API enabled, then Create credentials > OAuth client ID.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/web-server",
+   "quote": "Create credentials > OAuth client ID",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "The Cloud console Credentials page requires Google sign-in.",
+   "source_url": "https://console.cloud.google.com/apis/credentials",
+   "quote": "login_wall: true",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "The authorization code is exchanged for access and (with offline access) refresh tokens. Refresh tokens should be stored, and a new one can be forced with approval_prompt=force.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/web-server",
+   "quote": "Always store user refresh tokens.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Gmail scopes are grouped as non-sensitive, sensitive and restricted. gmail.send is sensitive, and sensitive scopes need OAuth App Verification.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+   "quote": "Sensitive: These scopes provide access to specific Google user data",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Restricted Gmail scopes include mail.google.com, gmail.readonly, gmail.compose, gmail.insert, gmail.modify, gmail.metadata, gmail.settings.basic and gmail.settings.sharing.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+   "quote": "Request this scope only if your application needs to immediately and permanently delete threads and messages",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Restricted scope data stored on or sent through servers needs a security assessment.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+   "quote": "If you store restricted scope data on servers (or transmit), then you must go through a security assessment.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Apps accessing restricted data through a third-party server need an annual assessment by a Google-approved third party.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "must undergo an annual security assessment by a Google-approved third party.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "The assessment follows the App Defense Alliance CASA framework.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "cloud application security assessment framework (CASA)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "The privacy policy must be linked from the consent screen, hosted on the home page's domain, and disclose data use, storage and sharing.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "hosted within the same domain as your application's home page",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "The home page must be public and relevant. Play Store or Facebook pages don't count.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "Your home page must be publicly accessible",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Brand verification checks authorized domains in Search Console first. Compliant results are valid for 7 days.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "Compliant verification results are valid for 7 days.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Data-access review requires an unlisted YouTube demo video of the grant flow and scope usage.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "Upload the video to YouTube Studio and set Visibility as Unlisted.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Google's Trust & Safety team may email the developer contact and support email for more information.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Verification exemptions include personal use by a few known users and development/testing projects.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "Exceptions to verification requirements include personal use",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Development and test builds don't need verification unless launched publicly.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "Apps in development: if your app is experimental or a test build, you don't need to go through verification",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "An unverified app is limited to 100 new users in total after it shows the unverified-app screen.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "100 new users in total, after the app presents the unverified app screen",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "A privacy policy URL is required on the consent screen, and Search Console ownership must be verified by a project owner or editor.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "You must have a privacy policy URL.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Adding redirect URLs/JS origins or changing the product name after verification requires re-verification.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "you have to go through verification again.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Changing the client or adding scopes after verification may trigger re-verification.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "If you change your client or use new scopes after verification, you might have to go through verification again.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Community reports say refresh tokens expire after about 7 days for External apps in Testing status.",
+   "source_url": "https://unified.to/blog/why_google_oauth_returns",
+   "quote": "refresh tokens expire in 7 days when the OAuth consent screen is External and the publishing status is Testing",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "A community post says Production status keeps refresh tokens valid until revoked.",
+   "source_url": "https://tech.queenofsandiego.com/posts/2026-05-06-2124.html",
+   "quote": "Production: Unlimited users; refresh tokens valid indefinitely",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f25b",
+   "claim": "A community post says the publishing-status switch is UI-only in the Cloud Console.",
+   "source_url": "https://tech.queenofsandiego.com/posts/2026-05-06-1850.html",
+   "quote": "This is a UI-only setting in the Google Cloud Console",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "A community guide says the 100-user cap and 7-day test-user token expiry are lifted after verification.",
+   "source_url": "https://www.unipile.com/google-oauth-consent-screen/",
+   "quote": "Once you submit for verification and Google approves your app, the 100-user cap is lifted",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "A community summary cites a limit of 100 live refresh tokens per Google Account per client ID.",
+   "source_url": "https://unified.to/blog/why_google_oauth_returns",
+   "quote": "100 live refresh tokens per Google Account per OAuth 2.0 client ID",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "A 4-6 week timeline is cited for restricted-scope verification, though Google only says several weeks.",
+   "source_url": "https://developers.googleblog.com/get-smart-about-preparing-your-app-for-oauth-verification/",
+   "quote": "Restricted Scope Verification (4-6 weeks)",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Google says verification for sensitive data can take several months.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "verification might require several months for the app to complete.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "CASA cost estimates conflict, from about $500/year to $15,000-75,000.",
+   "source_url": "https://www.reversebits.tech/blog/gmail-api-compliance/",
+   "quote": "fees of $15,000–$75,000 or more",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "A community guide says a missed annual renewal can lead to revoked production access.",
+   "source_url": "https://www.unipile.com/gmail-api-scopes-guide/",
+   "quote": "If you miss the renewal window, Google can revoke your app's production access.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "A vendor reports completing CASA Tier 2 via an ADA lab for Gmail scopes.",
+   "source_url": "https://cellcog.ai/blog/casa-security-assessment/",
+   "quote": "required a CASA Tier 2 (AL1) security assessment",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "gmail.send is sensitive while gmail.readonly/modify are restricted, so read-and-send spans both tiers.",
+   "source_url": "https://developer.nylas.com/docs/cookbook/use-cases/build/google-oauth-scopes/",
+   "quote": "a read-and-send app crosses both of Google's two review tiers at once.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Google advises requesting the smallest scope. Send-only apps shouldn't request full mailbox access.",
+   "source_url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "quote": "don't request the scope that provides full access to the user's email data.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "A community post says any production app using restricted Gmail scopes beyond 100 users needs a security assessment.",
+   "source_url": "https://security.googlecloudcommunity.com/google-security-operations-2/what-happened-to-local-app-gmail-api-access-7138",
+   "quote": "requires a security assessment for *any* application that accesses Restricted Scopes in a production environment",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "Scopes requested in code must match the consent screen, or users see the unverified-app screen.",
+   "source_url": "https://support.google.com/cloud/answer/7454865",
+   "quote": "Make sure that scopes you request in your app are the same as what's in your OAuth consent screen.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Public apps using scopes that access user data must complete verification.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+   "quote": "If your public application uses scopes that permit access to certain user data, it must complete a verification process.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "Gmail API access is governed by the Workspace user data and developer policy.",
+   "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Redirect URI rules for Google web clients (exact match, localhost, limits) were not verified from an official Google page.",
+  "PKCE support for the Gmail web-server flow was inferred only from the OIDC discovery document.",
+  "Refresh-token lifetime details (7-day Testing expiry, 100 tokens per client, inactivity expiry) come only from community sources.",
+  "Verification timelines are not fixed: Google says 'several weeks' to 'several months'. 4-6 weeks is a community estimate.",
+  "CASA cost is unknown, with community estimates ranging from about $500/year to $15,000-75,000.",
+  "Whether Composio's managed Google OAuth client is verified and CASA-assessed was not checked.",
+  "Whether a personal Gmail account (no Workspace org) can create an External consent screen without issues was not confirmed. The Internal user type requires Workspace (community only).",
+  "The exact console steps for adding test users to an allowlist were not covered by the findings."
+ ],
+ "slug": "gmail_rep1",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T17:03:53+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 37,
+  "probes_run": 3,
+  "research_seconds": 189,
+  "est_cost_usd": 0.3245,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0498,
+   "claude-opus-5-5": 0.2747
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 12,
+    "out": 17448,
+    "cache_read": 166887,
+    "cache_write": 81822,
+    "search": 3
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 10735,
+    "cache_read": 0,
+    "cache_write": 12001,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

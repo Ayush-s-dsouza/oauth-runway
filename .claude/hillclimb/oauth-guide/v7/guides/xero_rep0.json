@@ -1,0 +1,963 @@
+{
+ "app": {
+  "name": "Xero",
+  "website": "https://www.xero.com",
+  "developer_portal_url": "https://developer.xero.com/app/manage",
+  "oauth_docs_url": "https://developer.xero.com/documentation/guides/oauth2/overview",
+  "category": "Accounting"
+ },
+ "verdict": {
+  "difficulty": "light_review",
+  "summary": "Creating a Xero Web app takes minutes and needs no review. New apps start on the free Starter tier, which allows only 5 connections. Adding a credit card moves you to Core, which allows 50 connections with no review. Going beyond 50 connections (Plus tier and up) requires Xero certification through the app partner program. Xero does not publish how long certification takes.",
+  "hands_on_effort": "30-60 min to reach your first connection; several days of work for the certification and partner application",
+  "time_to_first_connection": "15-30 min",
+  "approval_wait": "none up to 50 connections; certification for Plus and above has no published timeline (security assessment reported at roughly 2-3 weeks in a 2020 FAQ)"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Starter tier (your own organisation)",
+   "unlocks": "You can connect your own Xero organisation through your own client ID and secret.",
+   "limits": [
+    "New apps default to the Starter tier with 5 connections",
+    "Daily limit of 1,000 API calls on Starter; 60 calls per minute and 5 concurrent calls",
+    "Apps created on or after 2 March 2026 must use granular scopes"
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f15",
+    "f38",
+    "f27",
+    "f28"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Starter / Core tier (limited connections, uncertified)",
+   "unlocks": "Other users and organisations can connect without any review: up to 5 connections on free Starter, or up to 50 on Core after you add a credit card.",
+   "limits": [
+    "Starter: 5 connections. Core: 50 connections.",
+    "To add a 6th connection you must first add payment details. Credit card is the only billing method.",
+    "A connection is a unique user-and-organisation pair, but several users on the same organisation count once",
+    "Each organisation can connect at most five uncertified apps",
+    "Xero's Remote MCP tool is only available to commercial apps on Core or above",
+    "The daily API limit rises to 5,000 calls on tiers above Starter"
+   ],
+   "time_to_reach": "Immediate. Moving to Core takes a few minutes to add payment details.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f14",
+    "f15",
+    "f16",
+    "f18",
+    "f36",
+    "f37",
+    "f38",
+    "f43"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Certified app partner (Plus / Advanced / Enterprise)",
+   "unlocks": "1,000 (Plus), 10,000 (Advanced) or unlimited (Enterprise) connections. Certified apps do not count toward an organisation's five-uncertified-app cap. You can optionally list on the Xero App Store (required on Enterprise).",
+   "limits": [
+    "Certification is required from Plus upward",
+    "Initial and annual security assessment required from Advanced upward",
+    "Xero suggests onboarding at least 3 customers before certification and 10 beta customers before applying for an App Store listing",
+    "An App Store listing cannot be edited while it is under review",
+    "Journals endpoint, Practice Manager API and Bulk Connections need a security assessment and use-case approval, and are only available from Advanced"
+   ],
+   "time_to_reach": "No published timeline. A Developer Evangelist contacts you after submission. A 2020 FAQ estimates the security assessment (Advanced and up) at about 5 working days to complete plus 5-10 working days for Xero's review.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f14",
+    "f16",
+    "f17",
+    "f19",
+    "f20",
+    "f21",
+    "f22",
+    "f23",
+    "f24",
+    "f25",
+    "f31"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Create a free Xero developer account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign up or log in at developer.xero.com with the Xero login you will test with. The developer account is free.",
+   "url": "https://developer.xero.com/app/manage",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f2",
+    "f1"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create a new Web app in My Apps",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In My Apps, add a new app and choose Web app as the integration type (this is the standard code flow, which is eligible for the marketplace; Custom Connections are limited to one organisation). Enter the app name and company URL, paste the redirect URI, and tick the checkbox agreeing to the Xero Developer Platform Terms & Conditions.",
+   "url": "https://developer.xero.com/app/manage",
+   "values": [
+    {
+     "label": "Integration type",
+     "value": "Web app"
+    },
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "The redirect URI must match exactly, or Xero returns an \"Invalid URI\" error. Copy it from your Composio auth config: sources disagree between /api/v1/auth-apps/add and /api/v3/toolkits/auth/callback.",
+    "Redirect URIs must use HTTPS. http://localhost is allowed for local testing, but http://127.0.0.1 is rejected.",
+    "Do not create duplicate apps to get around connection caps; Xero's terms prohibit it."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f40",
+    "f45",
+    "f8",
+    "f44",
+    "f4",
+    "f6",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Generate and copy the client ID and client secret",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the app's configuration page, generate a client secret, and store the client ID and secret somewhere secure. Xero has no API keys; OAuth 2.0 client credentials are the only way to authenticate.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Pick granular scopes that fit your use case",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Compare Composio's default Xero scope list with the granular scopes Xero offers new apps. Replace any broad accounting.* scopes that your app is not allowed to request. Request only what your agent needs, because scopes cannot be removed from an existing token.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Apps created on or after 2 March 2026 reportedly cannot request the old broad scopes at all.",
+    "If a call is missing a scope, Xero returns HTTP 401 with WWW-Authenticate: insufficient_scope.",
+    "To drop scopes later, you must revoke the connection and reauthorise."
+   ],
+   "evidence_ids": [
+    "f27",
+    "f28",
+    "f29",
+    "f26",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a Composio auth config with your own credentials",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create a Xero auth config that uses your own OAuth app. Composio has no managed Xero app. Paste the client ID, client secret and the scopes you chose. Make sure the callback URL shown there is the one you registered in Xero.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f44",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Test authorisation with your own organisation",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection from Composio. It should send you to login.xero.com/identity/connect/authorize. Log in, choose your organisation and approve. Then make one read call, such as listing contacts, to confirm the scopes work.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "'unauthorized_client: Unknown client or client not enabled' means the client ID is wrong or the app is not registered correctly.",
+    "Refresh tokens reportedly rotate on use. Do not refresh the same connection from two processes at once.",
+    "A third-party source reports 30-minute access tokens and 60-day refresh tokens. Xero's own pages have not confirmed this."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f12",
+    "f13"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Onboard your first users within the Starter cap",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Invite up to 5 organisations to connect. Track the count in My Apps: each unique user-and-organisation pair is a connection, but several users on the same organisation count once. Customers who already have five uncertified apps connected cannot add yours.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f15",
+    "f18",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Add a credit card to move to Core (up to 50 connections)",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Before you need a 6th connection, add payment details in the developer portal. This moves the app to Core, which raises the cap to 50 connections and the daily API limit to 5,000 calls. Core is also required for Xero's Remote MCP tool.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Credit card is the only accepted billing method."
+   ],
+   "evidence_ids": [
+    "f36",
+    "f37",
+    "f14",
+    "f38",
+    "f43"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Meet the customer-count prerequisites for certification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Get at least 3 paying customers before certification (Xero recommends 10 beta customers before applying for an App Store listing). Make sure your app follows the Developer Platform terms, which prohibit training AI/ML models on API data and bots that simulate user actions.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f23",
+    "f22",
+    "f39"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Apply to the app partner program for certification",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Apply to become a Xero app partner and get certified. Plus and higher tiers require this. If your agent needs Journals, Practice Manager or Bulk Connections, contact Xero support about use-case approval and plan for a security assessment, which is required from Advanced upward.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f17",
+    "f24",
+    "f31",
+    "f32",
+    "f33"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for Xero's certification and listing review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "After you submit, a Developer Evangelist contacts you about required changes and go-live timing. Xero publishes no review duration. A 2020 FAQ estimated about 5 working days to complete the security assessment plus 5-10 working days for Xero's review.",
+   "url": null,
+   "values": [],
+   "est_time": "Unpublished; plan for 2+ weeks",
+   "gotchas": [
+    "You cannot edit a submitted App Store listing while it is under review."
+   ],
+   "evidence_ids": [
+    "f21",
+    "f20",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Optionally list on the Xero App Store",
+   "owner": "you",
+   "gate": 3,
+   "detail": "A listing is optional on Plus and Advanced and required on Enterprise. Listed ecosystem apps must also support Sign Up with Xero.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f19",
+    "f41"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Free Xero developer account and acceptance of the Developer Platform Terms",
+   "gate": 1,
+   "detail": "You must tick the terms checkbox when creating the app.",
+   "evidence_ids": [
+    "f2",
+    "f40"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "HTTPS redirect URI that matches exactly",
+   "gate": 1,
+   "detail": "The redirect URI must use HTTPS (localhost is allowed for testing; 127.0.0.1 and custom schemes are not) and must exactly match the URI used in the authorise request.",
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Credit card on file for more than 5 connections",
+   "gate": 2,
+   "detail": "Adding payment details moves the app to Core (50 connections). Credit card is the only billing method.",
+   "evidence_ids": [
+    "f36",
+    "f37",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Compliance with the updated Developer Platform terms",
+   "gate": 2,
+   "detail": "Do not train AI/ML models on API data and do not build bots that simulate user actions. You need Xero's explicit consent to exceed limits.",
+   "evidence_ids": [
+    "f39",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Certification through the app partner program",
+   "gate": 3,
+   "detail": "Required from Plus (1,000 connections) upward. Xero suggests having at least 3 customers first.",
+   "evidence_ids": [
+    "f24",
+    "f17",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Security assessment (initial and annual)",
+   "gate": 3,
+   "detail": "Required from Advanced upward, and for Journals, Practice Manager and Bulk Connections.",
+   "evidence_ids": [
+    "f24",
+    "f31",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Sign Up with Xero for App Store-listed apps",
+   "gate": 3,
+   "detail": "Required for ecosystem apps listed on the Xero App Store.",
+   "evidence_ids": [
+    "f41",
+    "f19"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "offline_access",
+   "tier": "basic",
+   "effect": "Needed to get a refresh token for long-lived agent connections. No review.",
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "community"
+  },
+  {
+   "scope": "Broad accounting.* scopes (e.g. accounting.invoices, accounting.payments, accounting.banktransactions, accounting.reports.*)",
+   "tier": "unknown",
+   "effect": "Apps created on or after 2 March 2026 reportedly cannot request these and must use granular equivalents. Existing apps can keep using broad scopes until September 2027.",
+   "evidence_ids": [
+    "f27",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "accounting.contacts, accounting.settings, accounting.attachments, accounting.budgets",
+   "tier": "basic",
+   "effect": "A third-party source says these remain available to every app regardless of creation date.",
+   "evidence_ids": [
+    "f29"
+   ],
+   "support": "community"
+  },
+  {
+   "scope": "Granular accounting scopes",
+   "tier": "basic",
+   "effect": "Available to Web and PKCE apps since March 2026. A call without the matching scope returns 401 insufficient_scope. Scopes cannot be removed from an existing token without reauthorising.",
+   "evidence_ids": [
+    "f28",
+    "f26",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Journals endpoint (accounting.journals.read)",
+   "tier": "restricted",
+   "effect": "Requires an initial and annual security assessment plus use-case approval, and is only available on Advanced or above.",
+   "evidence_ids": [
+    "f31",
+    "f32"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "Xero Practice Manager scopes",
+   "tier": "restricted",
+   "effect": "Requires a security assessment and use-case approval (Advanced or above). Not granted through OAuth setup alone.",
+   "evidence_ids": [
+    "f31",
+    "f33"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Error: unauthorized_client - Unknown client or client not enabled",
+   "cause": "The client ID in Composio does not match a registered Xero app.",
+   "fix": "Copy the client ID again from My Apps into your Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "\"Invalid URI\" error at authorisation",
+   "cause": "The redirect URI sent by Composio does not exactly match the one registered in Xero, or it uses 127.0.0.1 or a non-HTTPS URL.",
+   "fix": "Register the exact Composio callback URL shown in your auth config, using HTTPS.",
+   "contact": null,
+   "evidence_ids": [
+    "f6",
+    "f4",
+    "f44"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "HTTP 401 with WWW-Authenticate: insufficient_scope",
+   "cause": "The connection was authorised without the granular scope the endpoint needs.",
+   "fix": "Add the missing scope to the auth config, then revoke the connection and reauthorise.",
+   "contact": null,
+   "evidence_ids": [
+    "f26",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Authorisation fails or scopes are rejected for a new app using Composio's default scopes",
+   "cause": "Apps created on or after 2 March 2026 reportedly cannot request broad accounting.* scopes.",
+   "fix": "Replace broad scopes with granular ones in your Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "f27",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "A sixth organisation cannot connect",
+   "cause": "Starter tier allows only 5 connections.",
+   "fix": "Add a credit card to move to Core (50 connections), or apply for certification to go higher.",
+   "contact": null,
+   "evidence_ids": [
+    "f15",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "A customer cannot connect even though your app is under its cap",
+   "cause": "That organisation already has five uncertified apps connected.",
+   "fix": "The customer disconnects another uncertified app, or you get certified through the app partner program.",
+   "contact": null,
+   "evidence_ids": [
+    "f16",
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "A connection breaks after a token refresh",
+   "cause": "Refresh tokens reportedly rotate on use, so two concurrent refreshes leave one process holding an invalid token.",
+   "fix": "Let Composio manage refresh, and avoid refreshing the same connection outside Composio.",
+   "contact": null,
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "community"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "xero",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "offline_access",
+   "email",
+   "profile",
+   "openid",
+   "files",
+   "files.read",
+   "projects",
+   "projects.read",
+   "accounting.manualjournals.read",
+   "accounting.manualjournals",
+   "accounting.banktransactions.read",
+   "accounting.banktransactions",
+   "accounting.payments.read",
+   "accounting.payments",
+   "accounting.invoices.read",
+   "accounting.invoices",
+   "accounting.reports.tenninetynine.read",
+   "accounting.budgets.read",
+   "accounting.attachments.read",
+   "accounting.attachments",
+   "accounting.contacts.read",
+   "accounting.contacts",
+   "accounting.settings.read",
+   "accounting.settings",
+   "accounting.reports.taxreports.read",
+   "accounting.reports.trialbalance.read",
+   "accounting.reports.profitandloss.read",
+   "accounting.reports.executivesummary.read",
+   "accounting.reports.budgetsummary.read",
+   "accounting.reports.banksummary.read",
+   "accounting.reports.aged.read"
+  ],
+  "note": "Composio has no managed OAuth app for Xero, so you must register your own Web app at developer.xero.com and give Composio its client ID and secret. Composio's default scope list includes broad accounting.* scopes. Apps created on or after 2 March 2026 reportedly cannot request these, so replace them with the granular scopes your portal shows. Register exactly the callback URL shown in your Composio auth config: sources mention both /api/v1/auth-apps/add and /api/v3/toolkits/auth/callback."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "The developer portal's app management page is live.",
+   "source_url": "https://developer.xero.com/app/manage",
+   "quote": "You need to enable JavaScript to run this app.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Xero's authorize URL is on login.xero.com and the token endpoint is identity.xero.com/connect/token.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/auth-flow/",
+   "quote": "https://login.xero.com/identity/connect/authorize?response_type=code&client_id=YOURCLIENTID",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "A third-party guide reports 30-minute access tokens and 60-day refresh tokens.",
+   "source_url": "https://www.adalo.com/posts/create-app-using-xero-data",
+   "quote": "Xero access tokens expire after 30 minutes, while refresh tokens last for 60 days.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Refresh tokens reportedly rotate on use.",
+   "source_url": "https://www.activepieces.com/blog/xero-api-setup-authentication-and-limits-2026",
+   "quote": "Refresh tokens rotate on use; concurrent refresh means one process holds invalid credentials.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Connection ceilings are 5 (Starter), 50 (Core), 1,000 (Plus), 10,000 (Advanced), unlimited (Enterprise).",
+   "source_url": "https://developer.xero.com/pricing",
+   "quote": "Connections (maximum) | 5 | 50 | 1000 | 10,000 | No limit",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "New apps start on the Starter tier with 5 connections.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/limits/",
+   "quote": "New apps default to the starter tier with 5 connections.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Each organisation can connect at most five uncertified apps.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/limits/",
+   "quote": "each organisation or practice is limited to connecting a maximum of five uncertified apps.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Xero recommends applying to be an app partner to raise connection limits.",
+   "source_url": "https://developer.xero.com/documentation/best-practices/managing-connections/connections/",
+   "quote": "we recommend applying to become an app partner to have your connection limit increased",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Several users connecting the same organisation count once toward the connection limit.",
+   "source_url": "https://developer.xero.com/documentation/best-practices/managing-connections/connections/",
+   "quote": "Multiple users can connect your app to the same tenant, but only one of those connections will count towards your connection limit.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "App Store listing is not available on Starter/Core, optional on Plus/Advanced, required on Enterprise.",
+   "source_url": "https://developer.xero.com/pricing",
+   "quote": "Xero App Store | Not Applicable | Not Applicable | Optional | Optional | Required",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "A free Xero developer account is created first, then a new app is added from My Apps.",
+   "source_url": "https://docs.codat.io/integrations/accounting/xero/accounting-xero-setup/",
+   "quote": "If you do not have a Xero Developer account, you can create one for free.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "A submitted App Store listing is locked for editing during review.",
+   "source_url": "https://developer.xero.com/documentation/xero-app-store/app-partner-guides/app-listing",
+   "quote": "You won’t be able to edit your information after you submit as it will be under review.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Xero publishes no listing review duration; a Developer Evangelist follows up.",
+   "source_url": "https://developer.xero.com/documentation/xero-app-store/app-partner-guides/app-listing",
+   "quote": "A Developer Evangelist will be in touch to confirm if you need to make any changes",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Xero suggests applying for an App Store listing after onboarding at least 10 beta customers.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/limits/",
+   "quote": "We recommend applying to be listed on the Xero App Store once you’ve onboarded at least 10 beta customers.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Xero advises finding at least three customers before certification.",
+   "source_url": "https://developer.xero.com/documentation/xero-app-store/app-partner-guides/faqs/",
+   "quote": "Find at least three customers",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Certification is required from Plus upward; a security assessment is required from Advanced upward.",
+   "source_url": "https://developer.xero.com/pricing",
+   "quote": "Security Assessment (initial and annual)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "A 2020 FAQ estimates the security assessment at about 5 working days plus 5-10 working days for Xero's review.",
+   "source_url": "https://developer.xero.com/faq/xero-ecosystem-security-requirements-update",
+   "quote": "Typically the assessment takes around 5 working days to complete, followed by 5-10 working days for us to assess your answers.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Calls missing a scope return 401 with insufficient_scope.",
+   "source_url": "https://developer.xero.com/faq",
+   "quote": "The API will return a 401 forbidden error with a response header WWW-Authenticate:insufficent_scope.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Apps created on or after 2 March 2026 reportedly cannot use broad scopes.",
+   "source_url": "https://www.apideck.com/blog/xero-scopes",
+   "quote": "Apps created on or after March 2, 2026 have no access to the broad scopes at all.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Existing apps can keep using broad scopes until September 2027.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/scopes/",
+   "quote": "Existing apps & connections – If your app or connection currently uses broad scopes, you can continue to use them until September 2027.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Contacts, settings, attachments and budgets scopes reportedly remain available to all apps.",
+   "source_url": "https://www.apideck.com/blog/xero-scopes",
+   "quote": "accounting.contacts, accounting.settings, accounting.attachments, and accounting.budgets remain available to every app regardless of when it was created.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Xero does not offer API keys; apps register through OAuth 2.0 to get a client ID and secret.",
+   "source_url": "https://developer.xero.com/faq",
+   "quote": "Our API uses OAuth 2.0 which means you need to register your app to get a client id and client secret",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Scopes cannot be removed from an existing access token.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/scopes/",
+   "quote": "It’s not possible to remove scopes from an existing access token.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "Journals, Practice Manager and Bulk Connections need a security assessment and use-case approval.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "The Journals endpoint, Xero Practice Manager API, and Bulk Connections require a security assessment (initial and annual) and use case approval",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Use-case approval details are available only through Xero support.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "Please reach out to our support team for more information about the use case approval process.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Practice Manager scopes reportedly need a separate approval from Xero.",
+   "source_url": "https://satvasolutions.com/blog/xero-practice-manager-api-integration-guide",
+   "quote": "XPM-related scopes may not be available until Xero reviews and approves the access request.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Exceeding limits requires Xero's explicit consent.",
+   "source_url": "https://wiki.licenseware.io/wiki/xero-developer-platform-plans-and-api-limits/",
+   "quote": "Using the platform beyond applicable limits requires “Xero’s explicit consent”",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "Apps created on or after 2 March 2026 start on the new pricing model.",
+   "source_url": "https://developer.xero.com/pricing",
+   "quote": "Apps created on or after 2 March, 2026 will move directly to the new pricing model.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "A 6th connection requires adding payment details first.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "In order to add a 6th connection, you will need to first add your payment details.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f37",
+   "claim": "Credit card is the only billing method.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "The only approved billing method is by credit card.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "API limits: 5 concurrent, 60 per minute, 1,000 daily on Starter and 5,000 on higher tiers.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "Concurrent Limit: 5 calls in progress at one time.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "The terms prohibit training AI/ML models on API data.",
+   "source_url": "https://developer.xero.com/pricing",
+   "quote": "A new prohibition on using API data to train AI/ML models.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Code-flow redirect URIs must be HTTPS, with http://localhost allowed for testing; 127.0.0.1 is rejected.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/auth-flow/",
+   "quote": "This must be an https address, however for testing you can use http://localhost/ Please note that http://127.0.0.1 cannot be used",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f40",
+   "claim": "The app creation form requires agreeing to the Developer Platform Terms.",
+   "source_url": "https://docs.codat.io/integrations/accounting/xero/accounting-xero-setup/",
+   "quote": "Select the checkbox to agree to the Xero Developer Platform Terms & Conditions.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f41",
+   "claim": "Sign Up with Xero is required for App Store-listed apps.",
+   "source_url": "https://developer.xero.com/faq/pricing-and-policy-updates",
+   "quote": "Sign Up with Xero is still required for ecosystem apps listed on the Xero App Store.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f43",
+   "claim": "Remote MCP is available only to commercial apps on Core or above.",
+   "source_url": "https://developer.xero.com/changelog",
+   "quote": "This tool is available to commercial apps on Core or above",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f44",
+   "claim": "A Composio guide says to register a Xero Web app with the Composio callback as redirect URI.",
+   "source_url": "https://composio.dev/auth/xero",
+   "quote": "Redirect URI: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f45",
+   "claim": "Choose Web app as the integration type.",
+   "source_url": "https://mcpservers.org/servers/john-zhang-dev/xero-mcp",
+   "quote": "Select Web app",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Custom URL schemes are not accepted as redirect URIs.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/pkce-flow",
+   "quote": "Custom URL Schemes are not supported.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "The redirect URI must match exactly or Xero reports an Invalid URI error.",
+   "source_url": "https://github.com/XeroAPI/xero-node-oauth2-app/blob/master/README.md",
+   "quote": "must match the REDIRECT_URI variable otherwise an \"Invalid URI\" error will be reported",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Code and PKCE flows are marketplace-eligible; Custom Connections are not.",
+   "source_url": "https://developer.xero.com/documentation/guides/oauth2/overview/",
+   "quote": "Eligible for Marketplace | Yes | Yes | No",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Unknown client IDs are rejected at the authorize endpoint with unauthorized_client.",
+   "source_url": "https://login.xero.com/identity/connect/authorize",
+   "quote": "Error: unauthorized_client Unknown client or client not enabled",
+   "status": "probed",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Prices for the Core, Plus, Advanced and Enterprise tiers were not captured in the findings.",
+  "Xero publishes no duration for certification or App Store listing review. The 5 + 5-10 working-day security assessment estimate comes from a 2020 FAQ.",
+  "Use-case approval criteria and timelines for Journals, Practice Manager and Bulk Connections are not published; Xero refers you to support.",
+  "Xero does not state outright that a new Starter or Core app can serve live customers with no pre-approval; this is implied by the limits pages.",
+  "It is not confirmed whether an App Store listing requires a privacy policy, verified domain, logo or demo video.",
+  "Composio's callback URL differs between sources (/api/v1/auth-apps/add vs /api/v3/toolkits/auth/callback). Check your Composio dashboard.",
+  "Composio's default scopes were not tested against a newly created Xero app. Broad accounting.* scopes may be rejected.",
+  "Token lifetimes (30-minute access, 60-day refresh) come from third-party sources only.",
+  "The correct OpenID Connect discovery URL was not confirmed."
+ ],
+ "slug": "xero_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-29T02:54:34+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 52,
+  "probes_run": 3,
+  "research_seconds": 173,
+  "est_cost_usd": 0.3837,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0705,
+   "claude-opus-5-5": 0.3132
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 12,
+    "out": 19213,
+    "cache_read": 175044,
+    "cache_write": 79871,
+    "search": 5
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 12353,
+    "cache_read": 0,
+    "cache_write": 13221,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

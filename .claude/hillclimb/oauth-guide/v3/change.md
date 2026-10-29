@@ -1,0 +1,1 @@
+Baseline routing plus the research coverage gate (>=6 pages read; test-user limits, public review, scopes and requirements each covered by a fetched provider page): can harness steering close Haiku research's depth gap?

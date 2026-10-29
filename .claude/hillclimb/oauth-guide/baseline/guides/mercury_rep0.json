@@ -1,0 +1,664 @@
+{
+ "app": {
+  "name": "Mercury",
+  "website": "https://mercury.com",
+  "developer_portal_url": "https://docs.mercury.com/",
+  "oauth_docs_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+  "category": "Banking / Finance"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "There is no self-serve console for Mercury API OAuth clients. You can't connect even your own account until Mercury approves you as a partner through a private review that weighs security, use-case fit and regulatory factors. After approval, Mercury issues the client ID and secret by hand, encrypted to your GPG key. The one shortcut is Mercury's hosted MCP server, which supports Dynamic Client Registration and needs no pre-approval.",
+  "hands_on_effort": "2-4 hours (form, legal URLs, GPG key, Composio config, testing)",
+  "time_to_first_connection": "Only after Mercury approves you (no published timeline). Through the MCP server with Dynamic Client Registration: minutes.",
+  "approval_wait": "Not published. Mercury says timelines vary with integration complexity and it may ask for more information."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Partner approval + sandbox test client",
+   "unlocks": "A Mercury-issued test client for the sandbox (api-sandbox.mercury.com), so you can run the OAuth flow against your own test data.",
+   "limits": [
+    "No self-serve client creation; unknown client IDs are rejected with invalid_client",
+    "Sandbox tokens only work on api-sandbox.mercury.com, not production",
+    "Access tokens expire after 1 hour; refresh tokens after 720 hours (requires offline_access)"
+   ],
+   "time_to_reach": "After Mercury's partner approval (timeline not published)",
+   "requires_review": true,
+   "evidence_ids": [
+    "f2",
+    "f6",
+    "f13",
+    "f19",
+    "f24",
+    "f8"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Production client (dev/test redirect URIs)",
+   "unlocks": "The production client ID and secret. Dev/test redirect URIs you register let you connect your own and invited Mercury accounts.",
+   "limits": [
+    "No documented user or install caps for new clients (not verified)",
+    "OAuth-issued tokens reportedly behave like API tokens, including the IP allowlist rule for write access",
+    "Tokens unused for 45 days are reportedly deleted"
+   ],
+   "time_to_reach": "Comes with the same approval, after you send redirect URIs, legal links and a GPG key",
+   "requires_review": true,
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f21",
+    "f22"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production (any Mercury customer)",
+   "unlocks": "Any Mercury customer can authorize your app through the approved production client.",
+   "limits": [
+    "Only read and offline_access are documented as API OAuth scopes (per third-party analysis); write and money-movement operations aren't reported as available through delegated OAuth",
+    "Payment and transfer requests made through MCP still need approval inside Mercury"
+   ],
+   "time_to_reach": "Same as Gate 2. No separate public listing or marketplace review was found.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f2",
+    "f4",
+    "f11",
+    "f23",
+    "f17",
+    "f27"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Choose API OAuth or the MCP server",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Mercury API OAuth (oauth2.mercury.com) needs partner approval before any connection works. Mercury's hosted MCP server (mcp.mercury.com) supports Dynamic Client Registration (RFC 7591): your client gets its own client_id at runtime with no pre-approval. If you need a Composio-brokered API connection, continue with the steps below.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "For MCP registration, client_name must not begin with the word 'Mercury' or registration fails.",
+    "For MCP, a web app should use an https redirect URI and omit token_endpoint_auth_method so Mercury returns a client secret."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f14",
+    "f19"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Draft the partner application content",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Draft the answers Mercury's form asks for: company name and website, company address, a company description, details of the product being integrated, and your intended API use. Be specific about what data you read and why, because Mercury weighs security, use-case fit and regulatory considerations.",
+   "url": null,
+   "values": [],
+   "est_time": "30-60 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f3",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit Mercury's OAuth partner form",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the form linked from Mercury's 'Integrations with OAuth2' page and submit your application. There is no self-serve developer console for Mercury OAuth.",
+   "url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f3",
+    "f13",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for Mercury's review",
+   "owner": "provider_wait",
+   "gate": 1,
+   "detail": "Mercury reviews the request. Timelines vary with integration complexity, and Mercury may ask for more information.",
+   "url": null,
+   "values": [],
+   "est_time": "Not published",
+   "gotchas": [],
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare legal URLs, logo and a GPG key",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Publish links to your terms of service, privacy policy and logo. Generate a GPG key pair and export the public key so Mercury can deliver credentials securely. Keep the private key safe yourself.",
+   "url": null,
+   "values": [],
+   "est_time": "30-60 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Send redirect URIs and app details to Mercury",
+   "owner": "you",
+   "gate": 2,
+   "detail": "After approval, send Mercury your production redirect URI, any dev/test redirect URIs, your terms/privacy/logo links and your GPG public key. Use Composio's callback URL as the production redirect URI.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Mercury registers redirect URIs on its side, so changing them later means contacting Mercury again."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Receive and decrypt the client credentials",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Mercury sends the client ID and client secret through a secure channel, along with credentials for a sandbox test client. Decrypt them with your GPG private key and store them in a secrets manager.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Configure a custom OAuth connection in Composio",
+   "owner": "you",
+   "gate": 2,
+   "detail": "There is no Mercury toolkit in Composio, so set up a custom OAuth auth config using Mercury's client ID and secret and the authorize endpoint https://oauth2.mercury.com/oauth2/auth. Request the scopes 'read offline_access' (space-separated). Use PKCE with code_challenge_method S256 if your setup supports it.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorize URL",
+     "value": "https://oauth2.mercury.com/oauth2/auth"
+    },
+    {
+     "label": "Scopes",
+     "value": "read offline_access"
+    },
+    {
+     "label": "Response type",
+     "value": "code"
+    },
+    {
+     "label": "PKCE method",
+     "value": "S256"
+    }
+   ],
+   "est_time": "20-30 min",
+   "gotchas": [
+    "The token endpoint URL wasn't confirmed in the research. Copy it from Mercury's 'obtain the tokens' reference.",
+    "Without offline_access you get no refresh token, and access tokens expire after 1 hour."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f7",
+    "f9",
+    "f10",
+    "f11",
+    "f19"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Test the flow against the sandbox",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Run a test authorization with the sandbox test client and call api-sandbox.mercury.com. Check that you get an access token and a refresh token, and that refreshing works.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "Sandbox tokens are rejected by production api.mercury.com, so switch both the client and the API host together."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f24",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Connect production accounts",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Switch to the production client and connect your own Mercury account, then customer accounts. If you need write access, plan for the IP allowlist that Mercury requires on Read and Write tokens.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Tokens unused for 45 days are reportedly deleted, and unused write permissions are downgraded."
+   ],
+   "evidence_ids": [
+    "f20",
+    "f21",
+    "f22",
+    "f23"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Partner approval from Mercury",
+   "gate": 1,
+   "detail": "You submit a form with company name, website, address, description, product details and intended API use. Approval considers security, use-case fit and regulation.",
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Terms of service, privacy policy and logo links",
+   "gate": 2,
+   "detail": "Mercury asks for these after approval, before it creates the client.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "GPG public key",
+   "gate": 2,
+   "detail": "Mercury uses it to deliver the client ID and secret securely.",
+   "evidence_ids": [
+    "f5",
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Production and dev/test redirect URIs",
+   "gate": 2,
+   "detail": "Mercury registers these on the client. Include the Composio callback URL.",
+   "evidence_ids": [
+    "f5",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "IP allowlist for write access",
+   "gate": 3,
+   "detail": "Read and Write API tokens need an IP allowlist. OAuth tokens are reported to behave the same way.",
+   "evidence_ids": [
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "read",
+   "tier": "unknown",
+   "effect": "Read access to account and transaction data. This is enough for read-only dashboards.",
+   "evidence_ids": [
+    "f11",
+    "f12"
+   ],
+   "support": "community"
+  },
+  {
+   "scope": "offline_access",
+   "tier": "unknown",
+   "effect": "Returns a refresh token, which you need for continued access after the 1-hour access token expires.",
+   "evidence_ids": [
+    "f9",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "transactions:request, transfers:request, categories:create, categories:edit, transactions:update (MCP only)",
+   "tier": "unknown",
+   "effect": "Write scopes on the MCP server. Payment and transfer requests still need approval inside Mercury.",
+   "evidence_ids": [
+    "f17"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "\"The requested OAuth 2.0 Client does not exist.\" at oauth2.mercury.com",
+   "cause": "Mercury hasn't provisioned your client ID. API OAuth clients exist only after partner approval.",
+   "fix": "Submit the partner form and wait for Mercury to send credentials, or use the MCP server with Dynamic Client Registration.",
+   "contact": "Form linked from https://docs.mercury.com/docs/integrations-with-oauth2",
+   "evidence_ids": [
+    "f19",
+    "f2"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "{\"error\":\"invalid_client\",\"error_description\":\"Invalid client_id\"} at mcp.mercury.com/authorize",
+   "cause": "The MCP client_id isn't registered, or registration failed (for example, client_name starts with 'Mercury').",
+   "fix": "Register through Dynamic Client Registration first, with a client_name that doesn't start with 'Mercury'.",
+   "contact": null,
+   "evidence_ids": [
+    "f18",
+    "f15"
+   ],
+   "support": "verified"
+  },
+  {
+   "symptom": "Production API rejects a token that worked in testing",
+   "cause": "The token came from the sandbox (api-sandbox.mercury.com) environment.",
+   "fix": "Use the production client credentials and the production API host.",
+   "contact": null,
+   "evidence_ids": [
+    "f24"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Write calls fail or money-movement operations aren't available",
+   "cause": "Only read and offline_access are documented as API OAuth scopes (per third-party analysis). Write tokens also need an IP allowlist.",
+   "fix": "Design for read-only access through OAuth, or use the MCP write scopes, which still need in-app approval in Mercury.",
+   "contact": null,
+   "evidence_ids": [
+    "f11",
+    "f23",
+    "f20",
+    "f17"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": null,
+  "managed_oauth_available": false,
+  "default_scopes": [],
+  "note": "Composio has no Mercury toolkit and no managed OAuth app, so you can't start on managed auth. Every Composio-brokered Mercury API connection needs your own Mercury-approved client ID and secret, with Composio's callback URL registered by Mercury as a redirect URI. Check Composio's custom-OAuth support for Mercury yourself before you commit."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "composio_toolkit returned no Composio toolkit for 'mercury', so no managed OAuth app is indicated.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Mercury's API OAuth access requires prior approval.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "OAuth access to Mercury's API requires prior approval.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Approval starts with a form asking for company name, website, address, description, product details and intended API use.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "please submit this form with the following information",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Approval timelines vary with integration complexity; Mercury weighs security, use-case fit and regulatory considerations.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "Approval timelines vary depending on integration complexity",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "After approval Mercury asks for redirect URIs, terms/privacy/logo links, and a GPG public key.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "Links to your app's terms of service, privacy policy, and logo",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Mercury securely sends client ID and secret plus sandbox test-client credentials.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "we will securely share your client ID and client secret as well as credentials for a test client",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Mercury API OAuth2 supports authorization code and authorization code with PKCE.",
+   "source_url": "https://docs.mercury.com/docs/integrations-with-oauth2",
+   "quote": "supports the Authorization Code Grant Type and Authorization Code Flow with Proof Key for Code Exchange (PKCE)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Access tokens expire after one hour; refresh tokens after 720 hours.",
+   "source_url": "https://docs.mercury.com/reference/obtain-the-tokens",
+   "quote": "For security reasons, the access token expires in one hour.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Continuous access requires the offline_access scope.",
+   "source_url": "https://docs.mercury.com/reference/obtain-the-tokens",
+   "quote": "your client should include the offline_access scope in its configuration",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Start-flow endpoint takes space-separated scopes, response_type=code, and S256 PKCE.",
+   "source_url": "https://docs.mercury.com/reference/startoauth2flow",
+   "quote": "Must have value S256, the SHA256 function used to hash the code challenge.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Third-party analysis: Mercury documents only read and offline_access OAuth scopes.",
+   "source_url": "https://www.scalekit.com/blog/mercury-mcp-vs-api",
+   "quote": "Mercury documents only two OAuth scopes: read and offline_access.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Third-party guide: read suffices for read-only dashboards.",
+   "source_url": "https://docs.alterauth.com/reference/oauth-providers/mercury/",
+   "quote": "For read-only financial dashboards, read is sufficient.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Third-party guide: no self-serve OAuth developer console.",
+   "source_url": "https://docs.alterauth.com/reference/oauth-providers/mercury/",
+   "quote": "Mercury does not offer a self-serve developer console for OAuth.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Mercury MCP supports Dynamic Client Registration with no pre-approval.",
+   "source_url": "https://docs.mercury.com/docs/connecting-mercury-mcp",
+   "quote": "Your client asks Mercury for its own credentials at runtime. Nobody has to create an app for you first.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "MCP client_name must not begin with 'Mercury'.",
+   "source_url": "https://docs.mercury.com/docs/connecting-mercury-mcp",
+   "quote": "The client_name must not begin with the word \"Mercury\", or registration fails",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "MCP web apps use https redirect URI and omit token_endpoint_auth_method to get a secret.",
+   "source_url": "https://docs.mercury.com/docs/connecting-mercury-mcp",
+   "quote": "For a web app, use an https redirect URI and leave token_endpoint_auth_method out.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "MCP write scopes are separate and payment/transfer requests need approval in Mercury.",
+   "source_url": "https://docs.mercury.com/docs/connecting-mercury-mcp",
+   "quote": "Create a payment request that requires approval in Mercury.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "MCP authorize endpoint rejects unknown client_id with invalid_client.",
+   "source_url": "https://mcp.mercury.com/authorize",
+   "quote": "{\"error\":\"invalid_client\",\"error_description\":\"Invalid client_id\"}",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "API OAuth authorize endpoint returns invalid_client for unknown clients.",
+   "source_url": "https://oauth2.mercury.com/oauth2/auth",
+   "quote": "The requested OAuth 2.0 Client does not exist.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Read and Write API tokens require an IP allowlist.",
+   "source_url": "https://docs.mercury.com/docs/getting-started",
+   "quote": "Requires an IP whitelist for security purposes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Third-party: OAuth tokens behave like directly created tokens, including IP allowlist.",
+   "source_url": "https://www.quotaguard.com/integrations/mercury-bank",
+   "quote": "Mercury's OAuth2 flow returns API tokens that work the same way as directly-created tokens",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Third-party: unused write permissions downgraded and unused tokens deleted after 45 days.",
+   "source_url": "https://anythingmcp.com/guides/mercury-to-mcp",
+   "quote": "Mercury downgrades a token that has not used its write permission for 45 days",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Third-party: background agents cannot move money through delegated OAuth.",
+   "source_url": "https://www.scalekit.com/blog/mercury-mcp-vs-api",
+   "quote": "cannot get there through delegated OAuth",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Sandbox tokens belong to api-sandbox.mercury.com and are rejected by production.",
+   "source_url": "https://www.probo.com/docs/product/access-review/mercury",
+   "quote": "a token created in the sandbox belongs to the separate api-sandbox.mercury.com environment.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Composio's callback URL would need to be registered on the Mercury-approved client (inferred).",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Third-party: integrations for other Mercury customers require a form and prior approval.",
+   "source_url": "https://supergood.ai/docs/mercury-api",
+   "quote": "Building integrations on behalf of other Mercury customers requires submitting a form and prior approval before access is granted",
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Mercury publishes no review timeline; it only says timelines vary.",
+  "No public app-listing process, minimum installs or security assessment was found. Partner approval is private.",
+  "Not stated: whether partner approval requires a paid plan, an org admin role or business verification.",
+  "The full official API OAuth scope list wasn't fetched. 'read' and 'offline_access' come from third-party analysis.",
+  "Not found: install caps or rate limits on new OAuth clients.",
+  "Not verified on the Composio side: custom Mercury OAuth support, the exact callback URL and the token endpoint configuration.",
+  "Not confirmed: the token endpoint URL for the API OAuth flow.",
+  "The partner form (hosted on notion.site) wasn't fetched. Its fields are known only from Mercury's docs."
+ ],
+ "slug": "mercury_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T04:43:58+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 30,
+  "probes_run": 3,
+  "research_seconds": 129,
+  "est_cost_usd": 0.256,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0437,
+   "claude-opus-5-5": 0.2123
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 12,
+    "out": 12321,
+    "cache_read": 114063,
+    "cache_write": 55761,
+    "search": 3
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 8197,
+    "cache_read": 0,
+    "cache_write": 9670,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

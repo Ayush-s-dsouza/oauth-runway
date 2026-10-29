@@ -1,0 +1,1 @@
+v7 with Sonnet 5.5 writing instead of Opus: writing is ~85% of v7's cost, so can the mid-tier model hold judgement and faithfulness? Note: the default judge is also Sonnet, so v7/v8 are cross-checked with an Opus judge (evals/regrade.py).

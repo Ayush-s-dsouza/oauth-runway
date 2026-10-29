@@ -1,0 +1,660 @@
+{
+ "app": {
+  "name": "Notion",
+  "website": "https://www.notion.com",
+  "developer_portal_url": "https://app.notion.com/developers/connections",
+  "oauth_docs_url": "https://developers.notion.com/guides/get-started/authorization",
+  "category": "Productivity / workspace"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "Notion public connections are created in the Developer portal and work through OAuth without a Marketplace listing. Review applies to Marketplace listing (5-10 business days) and, per the docs, a security review before listing. One catch: the Authorization URL field stays empty until the connection is submitted for review.",
+  "hands_on_effort": "30-60 min for setup; 1-2 hours more for a Marketplace listing",
+  "time_to_first_connection": "15-30 min (or minutes on Composio managed auth)",
+  "approval_wait": "none documented for OAuth use; 5-10 business days for a Marketplace listing"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Public connection, your own workspace",
+   "unlocks": "Create the connection and get client ID/secret; test with your own account.",
+   "limits": [
+    "The Authorization URL field in the Configuration tab stays empty until the connection is submitted for review, so you may need to build the authorize URL yourself.",
+    "Installation scope (Any workspace vs Selected workspaces) is fixed at creation.",
+    "Selected-workspaces connections are not Marketplace-eligible and, since Sept 1 2026, the Free workspace block limit is enforced on them."
+   ],
+   "time_to_reach": "15-30 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f30",
+    "f24"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Public connection used by other workspaces (no listing)",
+   "unlocks": "Other users' workspaces can authorize through the OAuth flow when scope is 'Any workspace'. No Marketplace listing needed.",
+   "limits": [
+    "No official install or user cap found for unlisted public connections.",
+    "Rate limit: 180 req/min per connection (600 on Business/Enterprise), fixed 60-second window, plus a shared per-workspace limit.",
+    "Docs say limits may change."
+   ],
+   "time_to_reach": "Same day; no review documented",
+   "requires_review": false,
+   "evidence_ids": [
+    "f5",
+    "f12",
+    "f13",
+    "f14",
+    "f29",
+    "f3"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Marketplace listing",
+   "unlocks": "Public discovery in the Notion Marketplace.",
+   "limits": [
+    "Public connections must pass a Notion security review before Marketplace listing; details not published.",
+    "Only 'Any workspace' connections are Marketplace-eligible.",
+    "Rejections can be for brand/trademark or quality issues."
+   ],
+   "time_to_reach": "5-10 business days after submitting, plus preparation",
+   "requires_review": true,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f4",
+    "f11"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide: managed or own app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Test first with Composio managed OAuth. Create your own connection if you need your own app identity, redirect URI or a Marketplace listing.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Open the Developer portal",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in to Notion and open the Developer portal connections page. The old my-integrations URL redirects there. Creating a connection may require workspace owner rights; the role for public connections wasn't confirmed.",
+   "url": "https://app.notion.com/developers/connections",
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f26",
+    "f24"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create a public connection",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Create a new public connection. Choose installation scope carefully: 'Any workspace' for general use or Marketplace; 'Selected workspaces' otherwise.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [
+    "Installation scope cannot be changed after creation."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set the redirect URI",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the connection settings, add the redirect URI. Get it from your Composio auth config.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": null,
+   "gotchas": [
+    "If more than one redirect URI is configured, redirect_uri must be sent in the token request."
+   ],
+   "evidence_ids": [
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set capabilities",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Notion has no OAuth scopes. Select the capabilities (content, user information level) your agent needs; the consent prompt shows them to users. Request user information with email only if needed.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f21",
+    "f22"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy client ID and secret into Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the connection's Configuration tab, copy the OAuth client ID and secret. Create a Notion auth config in Composio with them.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Authorize with your own account. The auth URL uses client_id, redirect_uri, response_type=code, owner=user and an optional state. The token exchange uses Basic auth at https://api.notion.com/v1/oauth/token.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorization URL",
+     "value": "https://api.notion.com/v1/oauth/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://api.notion.com/v1/oauth/token"
+    }
+   ],
+   "est_time": null,
+   "gotchas": [
+    "The Authorization URL field in the portal stays empty until review submission; build the URL manually."
+   ],
+   "evidence_ids": [
+    "f18",
+    "f19",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Invite other workspaces",
+   "owner": "you",
+   "gate": 2,
+   "detail": "With 'Any workspace' scope, other users can authorize through the OAuth flow without a listing. Watch rate limits and the Health tab for failing requests.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f5",
+    "f12",
+    "f13",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Handle token refresh",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Refresh with grant_type refresh_token at the token endpoint. Each refresh returns a new access token and a new refresh token, so store both.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Draft the Marketplace listing",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Prepare listing name, description, category, tags, logo and images, and associate the public connection in the listing dashboard.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit the listing for review",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Submit in the listing dashboard. The Notion team reviews every submission, and the connection must pass a security review.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f6",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait and respond to feedback",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Expect an email within 5-10 business days. If changes are needed, address the feedback and resubmit.",
+   "url": null,
+   "values": [],
+   "est_time": null,
+   "gotchas": [],
+   "evidence_ids": [
+    "f8",
+    "f9"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Installation scope choice at creation",
+   "gate": 1,
+   "detail": "Any workspace (Marketplace-eligible) or Selected workspaces (not eligible). Cannot be changed later.",
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Listing metadata",
+   "gate": 3,
+   "detail": "Name, description, category, tags, logo, images and the associated public connection.",
+   "evidence_ids": [
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Notion security review",
+   "gate": 3,
+   "detail": "Required before Marketplace listing; scope and depth not published.",
+   "evidence_ids": [
+    "f6",
+    "f11"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Respect rate limits",
+   "gate": 2,
+   "detail": "180/min (600 on Business/Enterprise) per connection plus a shared per-workspace limit.",
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f15"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "Capabilities (no OAuth scopes)",
+   "tier": "basic",
+   "effect": "Permissions are set as connection capabilities in the Developer portal, not requested per authorization. No capability was found labeled sensitive or restricted.",
+   "evidence_ids": [
+    "f21",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "User information with email addresses",
+   "tier": "unknown",
+   "effect": "Highest user capability level; the only one that returns emails. No extra review documented.",
+   "evidence_ids": [
+    "f22",
+    "f23"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Authorization URL field is empty in the Configuration tab",
+   "cause": "It only populates after the connection is submitted for review.",
+   "fix": "Build the authorize URL yourself from client_id, redirect_uri, response_type=code and owner=user.",
+   "contact": null,
+   "evidence_ids": [
+    "f3",
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Marketplace listing rejected",
+   "cause": "Brand/trademark issues, quality concerns or not meeting baseline criteria.",
+   "fix": "Read Notion's feedback email, fix the issues and resubmit.",
+   "contact": null,
+   "evidence_ids": [
+    "f10",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Requests throttled (429) while under your own limit",
+   "cause": "A per-workspace limit is shared across all connections in that workspace.",
+   "fix": "Back off and retry; check the Health tab.",
+   "contact": null,
+   "evidence_ids": [
+    "f13",
+    "f27"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Cannot switch to Marketplace-eligible after creating a Selected-workspaces connection",
+   "cause": "Installation scope is immutable.",
+   "fix": "Create a new public connection with 'Any workspace' scope.",
+   "contact": null,
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "notion",
+  "managed_oauth_available": true,
+  "default_scopes": [],
+  "note": "Managed OAuth is available, with no default scopes since Notion uses capabilities. Start on managed auth for testing. Create your own public connection for your own app identity, redirect URI or a Marketplace listing. Confirm which Composio callback URL to register: the toolkit shows https://backend.composio.dev/api/v1/auth-apps/add, while a probe used a v3 callback path."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Notion's OAuth app is a public connection created in the Developer portal.",
+   "source_url": "https://developers.notion.com/guides/get-started/public-connections",
+   "quote": "Navigate to the Developer portal and create a new public connection.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Rejection reasons include brand/trademark and quality concerns.",
+   "source_url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+   "quote": "Connections are rejected for various reasons, from brand/trademark issues to quality concerns",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Template Marketplace terms allow optional security/privacy review; applying to connections is an inference.",
+   "source_url": "https://www.notion.com/help/template-gallery-guidelines-and-terms",
+   "quote": "Notion, or an authorized third party selected by us, may, but is not obligated to, conduct a security or privacy review",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Per-connection limit 180/min, 600/min on Business and Enterprise.",
+   "source_url": "https://developers.notion.com/reference/request-limits",
+   "quote": "Business and Enterprise | 600 requests per minute (an average of 10 per second)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "A per-workspace limit is shared across connections.",
+   "source_url": "https://developers.notion.com/reference/request-limits",
+   "quote": "A separate limit is shared across all of the workspace's connections and scaled to the workspace's plan.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Notion plans to adjust rate limits.",
+   "source_url": "https://developers.notion.com/reference/request-limits",
+   "quote": "In the future, Notion plans to adjust rate limits to balance for demand and reliability.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Changelog dates the fixed 60-second window per-connection limit.",
+   "source_url": "https://developers.notion.com/page/changelog",
+   "quote": "The per-connection rate limit is now enforced over a fixed 60-second window",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Redirect URIs are set on the connection; redirect_uri required in token request if multiple.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "If there are more than one redirect URIs included in your connection settings, this field is required.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Authorization URL parameters include owner=user.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "owner | Always use user.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Code exchange at the token endpoint with Basic auth returns access and refresh tokens.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "Notion responds to the request with an access_token, refresh_token, and additional information.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Client ID and secret are in the Configuration tab.",
+   "source_url": "https://developers.notion.com/guides/get-started/public-connections",
+   "quote": "After creation, visit the Configuration tab to retrieve your OAuth client ID and OAuth client secret.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Refresh returns new access and refresh tokens.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "Refreshing an access token will generate a new access token and a new refresh token.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "No granular scopes; capabilities govern permissions.",
+   "source_url": "https://developers.notion.com/reference/capabilities",
+   "quote": "All connections and personal access tokens have associated capabilities which enforce what they can do and see in a Notion workspace.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Three user information levels; email only at highest.",
+   "source_url": "https://developers.notion.com/reference/capabilities",
+   "quote": "User information with email addresses: Selecting this option ensures that User objects will include all information about the user",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "No capability labeled sensitive/restricted found in fetched docs.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Workspace owner is required to create an internal connection; role for public not stated.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "You are required to be a workspace owner to create a connection.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Legacy my-integrations URL redirects to the developer connections page.",
+   "source_url": "https://www.notion.so/my-integrations",
+   "quote": "Notion JavaScript must be enabled in order to use Notion.",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Health tab in the Developer portal shows recent requests and warnings.",
+   "source_url": "https://developers.notion.com/page/changelog",
+   "quote": "Internal and public connections now have a Health tab in the Developer portal.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "No official install cap for unreviewed public connections was found.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Authorization URL field is empty until the connection is submitted for review.",
+   "source_url": "https://developers.notion.com/guides/get-started/authorization",
+   "quote": "The Authorization URL field populates after a public connection is submitted for review",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Since Sept 1 2026 the Free workspace block limit is enforced for selected-workspace OAuth connections.",
+   "source_url": "https://developers.notion.com/page/changelog",
+   "quote": "the REST API enforces the existing Free workspace block limit for internal connections and OAuth connections restricted to selected workspaces.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Installation scope is fixed at creation; Any workspace is Marketplace-eligible, Selected workspaces is not.",
+   "source_url": "https://developers.notion.com/guides/get-started/public-connections",
+   "quote": "Installation scope is set once, at creation time, and can't be changed afterward.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Public connections work without a Marketplace listing.",
+   "source_url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+   "quote": "Public connections work independently of Marketplace listings.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Public connections must pass a security review before Marketplace listing.",
+   "source_url": "https://developers.notion.com/guides/get-started/overview",
+   "quote": "Public connections must undergo a Notion security review before being listed on the Marketplace.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Listing is drafted in the dashboard with name, description, category, tags, logo, images and the connection.",
+   "source_url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+   "quote": "Listing name and description",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "Notion reviews every listing; feedback and resubmission if changes needed.",
+   "source_url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+   "quote": "The Notion team reviews every listing submission.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Listing review takes 5-10 business days via email.",
+   "source_url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+   "quote": "expect to hear back from our team within 5-10 business days via email.",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No official install cap or user limit for unlisted public connections was found.",
+  "PKCE support and token lifetimes are unverified.",
+  "Redirect URI format rules are unconfirmed.",
+  "Marketplace requirements such as privacy policy, domain verification or demo video were not found.",
+  "Security review scope, cost and timing are unknown.",
+  "Whether a free plan or owner role is enough to create a public connection is unconfirmed.",
+  "Which Composio redirect URI (v1 auth-apps/add vs v3 callback) to register must be confirmed."
+ ],
+ "slug": "notion_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-29T03:24:43+00:00",
+  "model": "claude-haiku-5-5 -> claude-sonnet-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-sonnet-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 51,
+  "probes_run": 5,
+  "research_seconds": 118,
+  "est_cost_usd": 0.1649,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0768,
+   "claude-sonnet-5-5": 0.0881
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 18986,
+    "out": 19625,
+    "cache_read": 436906,
+    "cache_write": 103235,
+    "search": 5
+   },
+   "claude-sonnet-5-5": {
+    "in": 4,
+    "out": 6213,
+    "cache_read": 0,
+    "cache_write": 10369,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ]
+ }
+}

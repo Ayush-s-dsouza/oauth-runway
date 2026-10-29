@@ -1,0 +1,601 @@
+{
+ "app": {
+  "name": "OpenWeatherMap (OpenWeather API key)",
+  "website": "https://openweathermap.org",
+  "developer_portal_url": "https://home.openweathermap.org/users/sign_up",
+  "oauth_docs_url": null,
+  "category": "Weather API"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "OpenWeatherMap does not use OAuth. There is no OAuth app to register, no redirect URI, and no scopes. Access comes from an account API key sent with each request, so the setup is account sign-up, email verification, and copying the key.",
+  "hands_on_effort": "15-30 minutes",
+  "time_to_first_connection": "About 15 minutes, plus up to 2 hours for the new key to activate",
+  "approval_wait": "None found. No app review or verification process is described for API key use."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Individual account with API key",
+   "unlocks": "Calls to the weather endpoints from your own account, using your own API key, on the free plan.",
+   "limits": [
+    "Key is issued only after the email address is verified (f4).",
+    "New keys activate automatically, up to 2 hours after registration (f6).",
+    "Free plan limits are 60 calls per minute and 1,000,000 calls per month, per the older pricing page; verify on the current pricing page (f10).",
+    "Call limits apply at the account level, not per key, so creating more keys does not add capacity (f9)."
+   ],
+   "time_to_reach": "Minutes, plus up to 2 hours for key activation",
+   "requires_review": false,
+   "evidence_ids": [
+    "f3",
+    "f4",
+    "f6",
+    "f8",
+    "f9",
+    "f10"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Shared or other-user access (no separate tier found)",
+   "unlocks": "No invited-user, test-user, or dev-store tier was found in the provider's docs. Other people can only be served by their own accounts or by sharing your key, and the provider's stated licence limits on redistribution apply.",
+   "limits": [
+    "Account-level call limits are shared across all keys on the account (f9).",
+    "Daily limits reset between 00:00 and 00:05 UTC, and a block lifts only at that reset unless support intervenes (f17).",
+    "Over-limit on the free plan triggers a notice asking the owner to upgrade or cut usage; access is not cut off immediately (f16).",
+    "One Call API has a default limit of 2,000 calls per day, changeable in billing settings (f15)."
+   ],
+   "time_to_reach": "Not applicable",
+   "requires_review": false,
+   "evidence_ids": [
+    "f9",
+    "f15",
+    "f16",
+    "f17",
+    "f26"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Public availability (no review process found)",
+   "unlocks": "Using your key in a product that other people use. No app-review, verification, or listing process for third-party apps was found in the provider's pages.",
+   "limits": [
+    "Business licence does not allow sublicensing or reselling OpenWeather data (f24).",
+    "The free-tier open licence is aimed at smaller or pay-as-you-go plans; the business licence applies to professional and expert tiers (f23).",
+    "The provider does not support keys used inside third-party apps and routes that support to the app's own developer (f2, f21)."
+   ],
+   "time_to_reach": "Not applicable (no review described)",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f20",
+    "f21",
+    "f22",
+    "f23",
+    "f24"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Confirm the auth model before you start",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Do not look for an OAuth client ID, client secret, or redirect URI. The provider's getting-started page says the API key alone is enough to call its weather APIs, and every request must include the key. Composio has no OpenWeatherMap toolkit with managed OAuth, so the Composio auth config for this provider would be an API-key config, not an OAuth one.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "There is no Redirect URI for this provider. Do not paste the Composio callback URL anywhere in the OpenWeather console."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f7",
+    "f25",
+    "f26"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create an account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the sign-up page and fill in the 'Create New Account' form. The page sits behind a members login wall, so you may need to sign in after you register.",
+   "url": "https://home.openweathermap.org/users/sign_up",
+   "values": [
+    {
+     "label": "Sign-up page",
+     "value": "https://home.openweathermap.org/users/sign_up"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Verify your email address",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Click the verification link in the email. The API key is not issued until the address is verified. If the email does not arrive, resend it from profile settings one hour after registration; after that, a further resend is allowed three hours after the previous one.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min to 3 hours if the email is delayed",
+   "gotchas": [],
+   "evidence_ids": [
+    "f4",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Copy your API key",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in and open your account's API keys page. Copy the key shown there. You can create more keys if you want, but all keys on the account share one set of call limits.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "A new key can take up to 2 hours to activate. Calls made before then may fail even though the key is correct."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f8",
+    "f9"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Make a test call",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Send one request to a current weather endpoint with your key in the appid query parameter. An agent can run this once you give it the key. Treat the key as a secret: store it in an environment variable or secret manager, not in source code or logs. Requests without a key are not processed.",
+   "url": null,
+   "values": [
+    {
+     "label": "Key parameter",
+     "value": "appid=<your API key>"
+    }
+   ],
+   "est_time": "10 min (plus activation wait)",
+   "gotchas": [
+    "The exact weather endpoint URL was not confirmed in the research. Check the current API documentation before wiring it up."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f7",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Design around the rate limits",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Cache responses and avoid polling. The provider recommends no more than one call per location every ten minutes. A 429 response appears only when calls exceed the per-day or per-month limit. Free-tier limits in the older pricing page are 60 calls per minute and 1,000,000 per month; confirm these on the current pricing page before you rely on them.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f10",
+    "f18",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Decide whether you need One Call API",
+   "owner": "you",
+   "gate": 2,
+   "detail": "One Call API is a separate subscription with 1,000 free calls per day and pay-as-you-call billing above that. Starting it requires a short billing form, according to the official FAQ. A third-party guide says a card is needed even for the free calls, and the sources conflict. Check the billing page before you subscribe. The default daily limit is 2,000 calls, which you can change in billing settings.",
+   "url": "https://openweathermap.org/faq",
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [
+    "Do not assume the free One Call allowance is card-free. The sources disagree."
+   ],
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Plan for over-limit handling",
+   "owner": "you",
+   "gate": 2,
+   "detail": "On the free plan, the provider emails the account owner and asks them to upgrade or reduce usage rather than cutting access at once. Set up alerts and watch usage in the account dashboard. Blocks lift at the daily UTC reset (00:00 to 00:05) unless support intervenes.",
+   "url": null,
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f16",
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Check the licence before any public use",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Read the licence that applies to your plan. The open licence on the free tier is aimed at smaller or pay-as-you-go plans. The business licence allows integration into commercial products but prohibits sublicensing and reselling OpenWeather data. If your agent product passes weather data to end users, confirm that this fits the licence before you launch.",
+   "url": "https://old.openweathermap.org/full-price",
+   "values": [],
+   "est_time": "30-60 min",
+   "gotchas": [
+    "The pricing page you would read is an older copy. Use the current licence terms on the provider's site."
+   ],
+   "evidence_ids": [
+    "f22",
+    "f23",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Confirm there is no review step and set up support",
+   "owner": "you",
+   "gate": 3,
+   "detail": "No app review, verification, or listing process for third-party apps was found. The marketplace links sell datasets rather than hosting apps. Support for a third-party integration goes to that integration's own developer, so you are that developer. Put your own support contact in your product's documentation.",
+   "url": "https://openweathermap.org/marketplace",
+   "values": [],
+   "est_time": "15 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Verified email address",
+   "gate": 1,
+   "detail": "The API key is issued only after the account email is verified.",
+   "evidence_ids": [
+    "f4",
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Key activation wait",
+   "gate": 1,
+   "detail": "New keys activate automatically within up to 2 hours of registration.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "API key on every request",
+   "gate": 1,
+   "detail": "Requests without an appid key are not processed.",
+   "evidence_ids": [
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Account-level rate limits",
+   "gate": 2,
+   "detail": "Limits are shared across all keys on the account, and the free plan figures come from an older pricing page.",
+   "evidence_ids": [
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "One Call billing form",
+   "gate": 2,
+   "detail": "One Call needs a billing form to start. Card requirement conflicts across sources.",
+   "evidence_ids": [
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Licence limits on resale",
+   "gate": 3,
+   "detail": "Sublicensing and reselling are not permitted under the business licence.",
+   "evidence_ids": [
+    "f24"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [],
+ "blockers": [
+  {
+   "symptom": "No OAuth app, consent screen, client ID, or redirect URI can be found anywhere in the console or docs.",
+   "cause": "OpenWeatherMap uses account API keys only. Its docs describe no OAuth 2.0 flow and no scope list.",
+   "fix": "Do not try to build OAuth. Create an account, verify email, and use the API key in the appid parameter.",
+   "contact": null,
+   "evidence_ids": [
+    "f1",
+    "f7",
+    "f22",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "The provider will not support your integration if it uses the key inside a third-party app.",
+   "cause": "The provider states it does not provide technical support for using its API keys inside third-party applications, and routes that support to the app's developer.",
+   "fix": "Plan to support your own integration. Put a support contact in your product documentation and do not depend on OpenWeather support for it.",
+   "contact": "https://openweathermap.org/support-centre",
+   "evidence_ids": [
+    "f2",
+    "f21",
+    "f28"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": null,
+  "managed_oauth_available": false,
+  "default_scopes": [],
+  "note": "Composio has no OpenWeatherMap toolkit and no managed OAuth app for it. There is nothing to register and no scopes to declare. Use the API key approach in this guide. Composio-brokered OAuth would only apply if OpenWeatherMap adds an OAuth flow, and nothing in the provider's docs suggests it plans to."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "The provider's getting-started page says the API key alone is enough to call its weather endpoints, with no authorization or consent flow.",
+   "source_url": "https://openweathermap.org/appid",
+   "quote": "The API key is all you need to call any of our weather APIs.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "The provider does not support customers who run its keys inside third-party apps and points them to the app's developer.",
+   "source_url": "https://openweathermap.org/appid",
+   "quote": "we do not provide technical support for using an OpenWeather API key inside third-party applications",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Account creation is a self-service 'Create New Account' sign-up form behind a members login wall.",
+   "source_url": "https://home.openweathermap.org/users/sign_up",
+   "quote": "Create New Account",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "The API key is issued only after the account email is verified, and then appears on the account's API keys page.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Once your account is created and your email address is verified, you will receive your personal API key (APPID)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "A verification email can be resent from profile settings one hour after registration, then again three hours after the previous resend.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "you can send another verification email 3 hours after your previous resend request",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "A new key activates automatically, up to 2 hours after registration.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Your API key will be activated automatically, up to 2 hours after your successful registration.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Every request must include the key; the platform does not process calls without one.",
+   "source_url": "https://openweathermap.org/appid",
+   "quote": "Our platform only processes the API requests with an API key included.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "An account can hold as many keys as the holder wants.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "You can create as many keys as you like.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "API call limits apply at the account level, not per key.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "API call limits are applied at the account level, not per API key.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "The older pricing page lists the free plan as free with a limit of 60 calls per minute and 1,000,000 calls per month.",
+   "source_url": "https://old.openweathermap.org/full-price",
+   "quote": "Price is fixed, no other hidden costs",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "One Call API has its own subscription with 1,000 free calls per day and pay-as-you-call billing above that.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "1,000 API calls per day are included for free.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Starting One Call requires a short billing form; the official page does not describe a card requirement for free calls.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Fill out a short billing form and complete your subscription.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "A third-party guide says One Call 3.0 requires a card on file even for its 1,000 free daily calls.",
+   "source_url": "https://freeapihub.com/apis/openweathermap-api",
+   "quote": "One Call API 3.0 requires a credit card on file even for its 1,000 free daily calls.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "One Call's default daily limit is 2,000 calls, which the account owner can change in billing settings.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "the limit of 2,000 API calls per day is set by default",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "On the free plan, the provider notifies the account owner and asks them to upgrade or cut usage rather than cutting access immediately.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "We will notify you and ask you to either migrate to a subscription plan",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Daily call limits reset between 00:00 and 00:05 UTC.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "Daily API call limits are reset every day between 00:00 and 00:05 UTC.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "A 429 response is returned only when calls exceed the set per-day or per-month limit.",
+   "source_url": "https://openweathermap.org/faq",
+   "quote": "if you make several calls that exceed the set limit of calls per day or per month.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "The provider recommends no more than one API call per location every ten minutes.",
+   "source_url": "https://openweathermap.org/appid",
+   "quote": "we recommend making API calls no more than once in 10 minutes for each location",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "The provider's pages describe no app-review, verification, or listing process for third-party apps; the linked marketplace sells datasets.",
+   "source_url": "https://openweathermap.org/marketplace",
+   "quote": "Available through our Marketplace",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Support for a third-party integration goes to that integration's own developer, not the provider.",
+   "source_url": "https://openweathermap.org/appid",
+   "quote": "please get in touch with the application’s support team or developer directly",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "The only access tiers described are subscription plans and their data licences; no OAuth permission set or scope list appears.",
+   "source_url": "https://old.openweathermap.org/full-price",
+   "quote": "Allows the users to integrate our data into their commercial derivative product.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "The free-tier open licence is aimed at smaller or pay-as-you-go plans; the business licence applies to professional and expert tiers.",
+   "source_url": "https://old.openweathermap.org/full-price",
+   "quote": "For smaller or pay-as-you-go plans",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Sublicensing and reselling of OpenWeather data is not permitted under the business licence.",
+   "source_url": "https://old.openweathermap.org/full-price",
+   "quote": "Sublicensing and reselling of OpenWeather products is not allowed.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "The developer page states a single key is required for all API requests, and current weather endpoints are in free and paid plans.",
+   "source_url": "https://openweathermap.org/api",
+   "quote": "This key is required for all API requests.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "The API landing page has a 'Get API Key' call to action pointing to sign-in, with no OAuth entry point.",
+   "source_url": "https://openweathermap.org/api",
+   "quote": "Get API Key",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "The support centre is a general help desk and describes no developer-app review queue.",
+   "source_url": "https://openweathermap.org/support-centre",
+   "quote": "our qualified support team is on hand to answer your questions",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "No OAuth authorize or token endpoint, app registration portal, redirect URI rules, PKCE, scopes, or refresh-token policy was found. If OpenWeatherMap adds OAuth later, this guide must be redone.",
+  "The free-tier figures (60 calls/minute, 1,000,000 calls/month) come from an older pricing page and third-party sites. The current pricing page at openweathermap.org/price could not be fetched, so verify there.",
+  "Sources conflict on whether One Call needs a card on file for its free 1,000 calls per day. Confirm on the billing page before subscribing.",
+  "The exact current weather endpoint URL was not confirmed in the research. Check the current API documentation.",
+  "OpenID Connect support could not be confirmed because the discovery probe timed out.",
+  "The provider also runs an agent channel (openweathermap.org/agents) and an MCP server. These are not developer app-registration paths and were not evaluated. The agent channel is run by a related company, not OpenWeather.",
+  "No review, verification, or minimum-install requirement was found for public use. This is an absence in the pages read, not a confirmed policy."
+ ],
+ "slug": "openweathermap_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:56:48+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 26,
+  "probes_run": 3,
+  "research_seconds": 118,
+  "est_cost_usd": 0.0464,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0464
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 22,
+    "out": 24044,
+    "cache_read": 251338,
+    "cache_write": 105232,
+    "search": 2
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

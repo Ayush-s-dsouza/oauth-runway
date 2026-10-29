@@ -1,0 +1,989 @@
+{
+ "app": {
+  "name": "Dropbox API app (DBX Platform)",
+  "website": null,
+  "developer_portal_url": "https://www.dropbox.com/developers/apps",
+  "oauth_docs_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+  "category": "OAuth / file storage API"
+ },
+ "verdict": {
+  "difficulty": "light_review",
+  "summary": "Creating and testing your own Dropbox app is quick and needs no review, but it stays limited to your own account and a small set of linked users. Going beyond roughly 50 linked users requires a production request, which Dropbox reviews against its branding, terms, privacy and scope rules.",
+  "hands_on_effort": "About 1-2 hours to create and test the app; roughly 1-2 days to prepare the production request (icon, privacy policy, use description, scope justification). Estimate, not from the findings.",
+  "time_to_first_connection": "About 15-30 minutes after you create the app (estimate).",
+  "approval_wait": "Dropbox states it responds to nearly all production requests within a few business days; this is not a guaranteed timeline."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Development status (own account)",
+   "unlocks": "Your own app key and secret, and linking of your own Dropbox account. Enough to build and test the OAuth flow end to end.",
+   "limits": [
+    "A new app is given development status and can only be connected to your own account.",
+    "Generate button issues a test token for your own account before any OAuth code is written."
+   ],
+   "time_to_reach": "Minutes after creating the app in the App Console.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f24"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Development status with additional linked users (invited/test users)",
+   "unlocks": "Other Dropbox users can link to the app, so you can test with real accounts other than your own. Enabled from the app info page.",
+   "limits": [
+    "Docs say development status can link up to 500 total Dropbox users when widened.",
+    "After 50 linked users, you have two weeks to apply for and receive production approval; otherwise linking of new users is frozen, and unlinking existing users does not lift the freeze.",
+    "Community report: the 51st account was refused. This conflicts with the 500-user figure and is unresolved; plan as if the cap is 50.",
+    "Consent screen shows a warning that the app 'only has a small number of users' before the user can allow access (community report)."
+   ],
+   "time_to_reach": "Immediate once you add users from the app info page; no review is required at this stage.",
+   "requires_review": false,
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f29",
+    "f33"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production status (anyone)",
+   "unlocks": "Public users can link without the user cap and warning limits applied to development apps.",
+   "limits": [
+    "Review checks that the app does not request broader permissions than its features need.",
+    "Once in production, the app name cannot be changed.",
+    "The app must keep meeting production requirements after approval.",
+    "Apps must follow Dropbox developer branding guidelines and developer terms; noncompliant apps are rejected."
+   ],
+   "time_to_reach": "Submit a production request; Dropbox says nearly all are answered within a few business days (not guaranteed). A request made before 50 linked users is not reviewed until 50 are linked unless you use 'Request early review'.",
+   "requires_review": true,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11",
+    "f14",
+    "f28",
+    "f30"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide: Composio managed app or your own app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Composio offers a managed Dropbox OAuth config, so you can start without your own app. Register your own app if you need production status, your own branding, or a fixed redirect URI. Composio's note says to create your own app key and secret for production, branding, or a fixed redirect.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Composio's managed app's production status and user cap were not verified."
+   ],
+   "evidence_ids": [
+    "f12",
+    "f27"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Create the app in the App Console",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign in to the Dropbox developer apps page and click create app. Choose the scoped access option and pick the content access level (App folder or Full Dropbox). Pick the app name carefully, because it cannot be changed once the app is in production.",
+   "url": "https://www.dropbox.com/developers/apps",
+   "values": [
+    {
+     "label": "Content access",
+     "value": "App folder if features allow it; otherwise Full Dropbox"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "The developer apps page requires a Dropbox login.",
+    "App folder is the narrower option; Full Dropbox covers every file in the user's Dropbox and is the broader permission.",
+    "Apps that use Extensions must be set to Full Dropbox."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f2",
+    "f11",
+    "f13",
+    "f15",
+    "f19"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Trim scopes on the Permissions tab",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Open the app settings and select scopes on the Permissions tab. Start from the scopes your features actually call; the endpoint docs list the scope each call needs. Do not copy Composio's full default list of 15 scopes.",
+   "url": null,
+   "values": [
+    {
+     "label": "Scopes",
+     "value": "Only the ones your app uses, e.g. files.metadata.read, files.content.read"
+    }
+   ],
+   "est_time": "30 min",
+   "gotchas": [
+    "Dropbox checks at production review that you do not request unnecessarily broad permissions.",
+    "Asking for more than needed can make users decline and can affect review.",
+    "Confirm each Composio default scope (file_requests, contacts, openid, etc.) appears in the Permissions tab before relying on it."
+   ],
+   "evidence_ids": [
+    "f13",
+    "f14",
+    "f16",
+    "f18",
+    "f17"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Register the redirect URI",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the app settings, add the redirect URI. Dropbox requires the redirect_uri in your authorization request to match a registered value exactly.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Composio's toolkit metadata and its callback probe show different backend URLs; confirm which one to register before saving."
+   ],
+   "evidence_ids": [
+    "f20"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Copy the app key and secret and test with the Generate button",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Copy the app key (client_id) and app secret (client_secret) from the app settings. In the OAuth 2 section, press Generate to issue a test token for your own account and confirm your API calls work before writing OAuth code.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Do not give end users instructions to register their own Dropbox app; they connect through the OAuth flow."
+   ],
+   "evidence_ids": [
+    "f12",
+    "f24"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Configure the auth in Composio and link your own account",
+   "owner": "you",
+   "gate": 1,
+   "detail": "If you use your own app, enter the app key and secret in the Composio Dropbox auth config. Paste the Composio callback URL into the Dropbox redirect URI field. Connect your own Dropbox account through Composio and confirm the authorization completes.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorize URL",
+     "value": "https://www.dropbox.com/oauth2/authorize"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://api.dropboxapi.com/oauth2/token"
+    },
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Authorize endpoint: https://www.dropbox.com/oauth2/authorize. Token endpoint: https://api.dropboxapi.com/oauth2/token.",
+    "The OpenID discovery document reports no PKCE methods, but Dropbox supports S256 PKCE for apps that cannot keep a secret."
+   ],
+   "evidence_ids": [
+    "f21",
+    "f31",
+    "f32"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Request a refresh token if the app needs background access",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "If the app must act when the user is not present, add token_access_type=offline to the authorization URL so a refresh token is returned. Apps that act only while a user is present can use short-lived tokens without one. An agent can add and verify this parameter in the flow.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorization URL parameter",
+     "value": "token_access_type=offline"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "Access token lifetime is not confirmed on an official Dropbox page; read the expiry from the token endpoint response."
+   ],
+   "evidence_ids": [
+    "f22",
+    "f23"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Add test users in development status",
+   "owner": "you",
+   "gate": 2,
+   "detail": "To let other accounts link, open the app info page and enable additional users. Track the count of linked users; note the 50-user threshold that starts the two-week production clock.",
+   "url": null,
+   "values": [
+    {
+     "label": "Linked-user cap in development",
+     "value": "50 (plan around this; docs say up to 500)"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "After 50 linked users, production approval must arrive within two weeks or new linking freezes.",
+    "Community reports a refusal at the 51st account; plan around 50.",
+    "Consent screen warns the app 'only has a small number of users'."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f5",
+    "f29",
+    "f33"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Draft the production request materials",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "An agent can draft the app-specific privacy policy (what the app does and does not do with user data), the description of how the app uses the API, and a scope justification that maps each scope to a feature. Check the draft against Dropbox's branding guidelines and developer terms.",
+   "url": null,
+   "values": [],
+   "est_time": "1 day",
+   "gotchas": [
+    "Privacy policy must be specific to the app, not a generic site policy.",
+    "Broader access planned but not yet built must be disclosed in the request."
+   ],
+   "evidence_ids": [
+    "f8",
+    "f9",
+    "f10",
+    "f14"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Prepare the app icon and confirm the name",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Upload an app icon, which the production form requires. Confirm the final app name, since it is locked once the app has production status.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "Name is locked at production status."
+   ],
+   "evidence_ids": [
+    "f8",
+    "f11"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Submit the production request",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Open the production request form from the app and fill in the use description, privacy policy URL, icon, and scope justification. If you have fewer than 50 linked users and need review early, use the 'Request early review' field and give evidence and an explanation.",
+   "url": "https://www.dropbox.com/developers/apps",
+   "values": [
+    {
+     "label": "Early review field",
+     "value": "Request early review"
+    }
+   ],
+   "est_time": "45 min",
+   "gotchas": [
+    "Requests made before 50 linked users are not reviewed until 50 are linked, unless early review is requested.",
+    "Domain verification, security assessment, demo video and minimum-install requirements were not found in the pages reviewed."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Wait for Dropbox review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Dropbox says it responds to nearly all production requests within a few business days. This is a stated turnaround, not a guarantee. Keep linked-user count under control and watch for a reply in the App Console.",
+   "url": null,
+   "values": [],
+   "est_time": "A few business days (stated, not guaranteed)",
+   "gotchas": [
+    "If you are not approved within two weeks of reaching 50 linked users, new linking freezes."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Team (Business API) apps: check team limits",
+   "owner": "you",
+   "gate": 3,
+   "detail": "If the app uses Business API endpoints, a development app can link to one team plus up to 5 additional development teams. If you need more teams, apply for production. Requirements beyond the 5-team limit were not detailed in the pages reviewed.",
+   "url": null,
+   "values": [
+    {
+     "label": "Development team cap",
+     "value": "1 team + up to 5 additional development teams"
+    }
+   ],
+   "est_time": "15 min",
+   "gotchas": [
+    "This applies only to team-linked apps, not to individual user apps."
+   ],
+   "evidence_ids": [
+    "f25",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Stay compliant after approval",
+   "owner": "you",
+   "gate": 3,
+   "detail": "After production approval, keep meeting the production requirements. Re-check scopes when you add features, and update the privacy policy and scope justification if use changes.",
+   "url": null,
+   "values": [],
+   "est_time": "Ongoing",
+   "gotchas": [
+    "Dropbox requires continued adherence to production requirements after approval."
+   ],
+   "evidence_ids": [
+    "f14",
+    "f30"
+   ],
+   "support": "unsupported"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Development-status app with your own account linked",
+   "gate": 1,
+   "detail": "Create the app in the App Console; a new app links only to your own account. No review.",
+   "evidence_ids": [
+    "f2",
+    "f3"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "Additional test users (up to the cap)",
+   "gate": 2,
+   "detail": "Enable users from the app info page. Plan around 50 linked users; docs say up to 500, but a community report says the 51st is refused.",
+   "evidence_ids": [
+    "f4",
+    "f33"
+   ],
+   "support": "community"
+  },
+  {
+   "item": "Production approval after 50 linked users",
+   "gate": 3,
+   "detail": "Apply within two weeks of reaching 50 linked users or new linking freezes. Unlinking does not lift the freeze.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "Early review before 50 linked users",
+   "gate": 3,
+   "detail": "Use the 'Request early review' field with evidence and an explanation; otherwise the request waits until 50 users link.",
+   "evidence_ids": [
+    "f6",
+    "f7"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "App icon",
+   "gate": 3,
+   "detail": "Required on the production form.",
+   "evidence_ids": [
+    "f8"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "App-specific privacy policy",
+   "gate": 3,
+   "detail": "Must state what the app does and does not do with user data.",
+   "evidence_ids": [
+    "f10"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "Branding guidelines and developer terms",
+   "gate": 3,
+   "detail": "Must be followed before applying; noncompliant apps are rejected.",
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "Minimal scopes",
+   "gate": 3,
+   "detail": "Review checks for unnecessarily broad permissions; disclose planned but unbuilt access in the request.",
+   "evidence_ids": [
+    "f14",
+    "f16"
+   ],
+   "support": "unsupported"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "files.metadata.read / files.content.read",
+   "tier": "unknown",
+   "effect": "Read file metadata and content. Request only if the app reads files; Full Dropbox access makes this broader than App folder.",
+   "evidence_ids": [
+    "f13",
+    "f15",
+    "f18"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "files.metadata.write / files.content.write",
+   "tier": "unknown",
+   "effect": "Write files. Drop if read-only; each write scope adds review scrutiny.",
+   "evidence_ids": [
+    "f14",
+    "f18"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "sharing.read / sharing.write",
+   "tier": "unknown",
+   "effect": "Sharing access. Include only if the feature creates or lists shared links.",
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "file_requests.read / file_requests.write",
+   "tier": "unknown",
+   "effect": "File requests. Not needed for most agents; drop unless used.",
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "contacts.read / contacts.write",
+   "tier": "unknown",
+   "effect": "Contacts. Not needed for most agents; drop unless used.",
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "account_info.read / account_info.write",
+   "tier": "unknown",
+   "effect": "Account info. Read is usually needed to identify the user; drop write unless used.",
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "scope": "openid, profile, email",
+   "tier": "unknown",
+   "effect": "Identity scopes listed in Dropbox's OpenID discovery document. Include only if you need sign-in identity.",
+   "evidence_ids": [
+    "f31"
+   ],
+   "support": "verified"
+  },
+  {
+   "scope": "Chooser, Saver, Embedder components",
+   "tier": "basic",
+   "effect": "Need no permissions and no production approval.",
+   "evidence_ids": [
+    "f17"
+   ],
+   "support": "unsupported"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "New Dropbox accounts are refused after 50 linked users; or the app is frozen to new linking.",
+   "cause": "Development status caps linking; after 50 linked users the two-week production window starts, and no production approval freezes new linking. Unlinking does not lift it.",
+   "fix": "Submit the production request before reaching 50 linked users, or use 'Request early review' with evidence. Do not rely on unlinking to reopen linking.",
+   "contact": null,
+   "evidence_ids": [
+    "f5",
+    "f33"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Production request is not reviewed.",
+   "cause": "Requests submitted before 50 linked users wait until the app reaches 50 linked users.",
+   "fix": "Fill in the 'Request early review' field with evidence and an explanation, or wait until 50 users have linked.",
+   "contact": null,
+   "evidence_ids": [
+    "f6",
+    "f7"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "Production request rejected or sent back for scope.",
+   "cause": "Requested scopes exceed what the app's features need, or planned but unbuilt access was not disclosed.",
+   "fix": "Trim scopes on the Permissions tab to what the code calls; disclose planned access in the request; prefer App folder access where it works.",
+   "contact": null,
+   "evidence_ids": [
+    "f14",
+    "f16"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "Production request rejected for noncompliance.",
+   "cause": "App does not follow Dropbox branding guidelines or developer terms, or lacks an app-specific privacy policy.",
+   "fix": "Check the branding guidelines and terms, and publish a privacy policy specific to the app before applying.",
+   "contact": null,
+   "evidence_ids": [
+    "f9",
+    "f10"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "symptom": "Team-linked (Business API) app cannot connect more than 5 teams.",
+   "cause": "Development status allows one team plus up to 5 additional development teams.",
+   "fix": "Apply for production status before connecting more teams.",
+   "contact": null,
+   "evidence_ids": [
+    "f25",
+    "f26"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Redirect URI mismatch on authorization.",
+   "cause": "The redirect_uri in the request does not exactly match a value registered in the App Console; Composio's metadata and callback probe show different URLs.",
+   "fix": "Confirm the correct Composio callback URL and register exactly that value in the Redirect URI field.",
+   "contact": null,
+   "evidence_ids": [
+    "f20"
+   ],
+   "support": "unsupported"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "dropbox",
+  "managed_oauth_available": true,
+  "default_scopes": [
+   "email",
+   "profile",
+   "account_info.write",
+   "account_info.read",
+   "files.metadata.write",
+   "files.metadata.read",
+   "files.content.write",
+   "files.content.read",
+   "openid",
+   "file_requests.write",
+   "file_requests.read",
+   "sharing.write",
+   "sharing.read",
+   "contacts.write",
+   "contacts.read"
+  ],
+  "note": "Start on Composio's managed Dropbox OAuth config to build and test quickly. Register your own app in the App Console if you need production status, your own branding, or a fixed redirect URI. Composio's default list is broad (15 scopes); trim it to what your app uses before review. Confirm which Composio callback URL to register, since the metadata and probe differ. Whether Composio's managed app is already in production, and its user cap, was not verified."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "The developer apps page sits behind a Dropbox login.",
+   "source_url": "https://www.dropbox.com/developers/apps",
+   "quote": "Login or Sign Up for a Dropbox Account",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Registering an app happens in the App Console, which walks through permissions, app key and secret, and redirect URIs.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "register your app with Dropbox by creating a new app in the App Console",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f3",
+   "claim": "A newly created app starts in development status and can only link to the developer's own account.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "it's given development status and can only be connected to your own account",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f4",
+   "claim": "Development status can be widened by enabling additional users, up to 500 total linked users.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "can only be linked with up to 500 total Dropbox users",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f5",
+   "claim": "After 50 linked users, the developer has two weeks to get production approval, or new linking is frozen and unlinking does not lift the freeze.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "you will have two weeks to apply for and receive production status approval",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f6",
+   "claim": "A production request submitted before 50 linked users is not reviewed until the app reaches 50 linked users.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "it will not be reviewed until your app has linked with at least 50 Dropbox users",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f7",
+   "claim": "Apps needing review before 50 users can use the 'Request early review' field with evidence and explanation.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "Request early review",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f8",
+   "claim": "The production form asks how the app uses the API and requires an uploaded app icon.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "to upload an icon for the app",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f9",
+   "claim": "Apps must follow developer branding guidelines and developer terms before applying; noncompliant apps are rejected.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "It will be rejected if it doesn't.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f10",
+   "claim": "The app needs a clear privacy policy specific to the app.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "include a clear privacy policy that's specific to your app",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f11",
+   "claim": "Once an app has production status its name is locked.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "once your app has production status, you can't change its name",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f12",
+   "claim": "End users should not be told to register their own Dropbox app.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "Do not instruct your users to register their own Dropbox application",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f13",
+   "claim": "Scopes are picked on the Permissions tab; content access level is chosen when creating the app.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "Scopes are selected in the Permissions tab of an app's settings page.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f14",
+   "claim": "At production review Dropbox checks that the app does not ask for broader permissions than needed; planned unbuilt access must be disclosed.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "we'll review that your app doesn't request an unnecessarily broad permission",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f15",
+   "claim": "App folder access confines the app to its own folder; Full Dropbox covers every file and is broader.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "App Folder: Your application will be able to take actions allowed by its scopes on data within its app folder only",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f16",
+   "claim": "Asking for more scope and access than needed can lead users to decline and can affect app review.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "could impact your app review process",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f17",
+   "claim": "Chooser, Saver and Embedder components need no permissions and no production approval.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "doesn't require production approval like other permissions do",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f18",
+   "claim": "Each API endpoint documents its required scope; scopes are grouped by read or write on objects.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "The scope required for any given API call is documented on the endpoint",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f19",
+   "claim": "Apps that use Extensions must be set to Full Dropbox access.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "Apps using Extensions must have an access type of Full Dropbox.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f20",
+   "claim": "The redirect_uri in the authorization request must match a registered value in the App Console.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "Dropbox checks that the specified redirect_uri parameter in your Authorization URL matches one of the registered values",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f21",
+   "claim": "Dropbox supports the authorization code flow (recommended), PKCE with S256, and a legacy implicit grant.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "Using S256 is the recommended approach.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f22",
+   "claim": "A refresh token is returned only when token_access_type=offline is added to the authorization URL.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "you'll need to include token_access_type=offline as a parameter on your Authorization URL",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f23",
+   "claim": "Apps needing background access should use refresh tokens; user-present apps can use short-lived tokens.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "Applications that require offline access to the API",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f24",
+   "claim": "The OAuth 2 section has a Generate button that issues a test token for the developer's own account.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+   "quote": "pressing the button that says \"Generate\"",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f25",
+   "claim": "A Business API app in development can link to one team, plus up to 5 additional development teams.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/api-reference/business-endpoints/overview",
+   "quote": "You can enable up to 5 additional development teams from your app's info page",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Community answer: team-linked apps need production status once they need more than five teams.",
+   "source_url": "https://community.dropbox.com/en/discussion/720545/need-a-clarity-on-dropbox-app-production-mode",
+   "quote": "If you'll need to have more than 5 teams connected to the app, you should apply for production status.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Dropbox says it responds to nearly all production requests within a few business days; not a guaranteed timeline.",
+   "source_url": "https://www.dropbox.com/developers/support",
+   "quote": "We respond to nearly all production requests within a few business days.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Consent screen warns the app 'only has a small number of users' before a user can allow access.",
+   "source_url": "https://github.com/ferdousbhai/omacloud/issues/32",
+   "quote": "the consent page first warns that the app \"only has a small number of users\"",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "An app must keep meeting production requirements after approval.",
+   "source_url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide",
+   "quote": "your app is required to adhere to the production status requirements even after it has been approved.",
+   "status": "inferred",
+   "flags": [
+    "cited URL was not retrieved during this research run"
+   ]
+  },
+  {
+   "id": "f31",
+   "claim": "The OpenID discovery document lists openid, profile and email scopes, the authorize URL, and the token endpoint; it reports no PKCE methods.",
+   "source_url": "https://www.dropbox.com/.well-known/openid-configuration",
+   "quote": "scopes_supported: openid, profile, email",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Probing the authorize endpoint with a fake client_id returned unknown_client_id, so the endpoint is live and validates client IDs.",
+   "source_url": "https://www.dropbox.com/oauth2/authorize",
+   "quote": "Invalid client_id: \"oauth-runway-probe-invalid-client\".",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "Community report: a development app was refused the 51st account; new linking stops at 50 unless production is applied for.",
+   "source_url": "https://github.com/ferdousbhai/omacloud/issues/32",
+   "quote": "at most 50 Dropbox accounts can connect; the 51st is refused",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Community answer: an app that will never link more than 50 users does not need production; development vs production does not change access token expiry.",
+   "source_url": "https://community.dropbox.com/en/discussion/503543/production-approval-for-a-very-small-amount-of-users",
+   "quote": "If you will not need to link more than 50 users to your app, you do not need to apply for production.",
+   "status": "community",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Conflict: docs say development apps can link up to 500 users, but a community report says the 51st account is refused and the 50-user two-week rule applies. Verify with Dropbox before relying on 500.",
+  "No published list of restricted or sensitive scopes that triggers extra security review, and no list of production rejection reasons was found.",
+  "Domain verification, security assessment, demo video, and minimum-install requirements for production were not found.",
+  "Access token lifetime is unconfirmed (a blog post says 4 hours); the official docs say only that the token endpoint returns expiry.",
+  "Composio's redirect URI differs between toolkit metadata (backend.composio.dev/api/v1/auth-apps/add) and the callback in the authorize probe (backend.composio.dev/api/v3/toolkits/auth/callback). Confirm which to register.",
+  "Several Composio default scopes (file_requests, contacts, openid) were not checked against Dropbox's current scope list.",
+  "Unknown whether Composio's managed Dropbox app is already in production or what user cap it has.",
+  "Rate limits for new or unreviewed apps were not found.",
+  "Requirements for production Business API (team) apps beyond the 5-team development limit were not detailed."
+ ],
+ "slug": "dropbox_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T15:59:18+00:00",
+  "model": "claude-haiku-5-5 -> claude-haiku-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-haiku-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "8 of 14 steps have no retrieved source",
+   "24 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 22,
+  "probes_run": 3,
+  "research_seconds": 107,
+  "est_cost_usd": 0.0416,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0416
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 14,
+    "out": 26087,
+    "cache_read": 74958,
+    "cache_write": 65782,
+    "search": 2
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5"
+  ]
+ }
+}

@@ -1,0 +1,817 @@
+{
+ "app": {
+  "name": "Gusto",
+  "website": "https://gusto.com",
+  "developer_portal_url": "https://dev.gusto.com",
+  "oauth_docs_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+  "category": "Payroll / HR"
+ },
+ "verdict": {
+  "difficulty": "heavy_review",
+  "summary": "Gusto only gives API access to approved App Integration and Embedded Payroll partners. The keys you create yourself in the portal work only against the sandbox. Real (production) keys come only after Gusto approves a Production Pre-Approval application and you pass its QA review and Security Review. If you are a Gusto customer connecting your own systems, the API isn't open to you; Gusto points you to its CLI or MCP server instead.",
+  "hands_on_effort": "1-2 hours for a working sandbox. Days to weeks to prepare the partner application, Partner Checklist and security materials (SOC 2 / pen test, or security questionnaire answers).",
+  "time_to_first_connection": "30-60 min, sandbox demo company only",
+  "approval_wait": "Gusto publishes no timeline. Expect weeks, because a Partnerships review, a Security Review and a QA review run one after another (this is an estimate, not a documented figure)."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Sandbox (Developer Portal app + demo company)",
+   "unlocks": "You can complete OAuth against a sandbox demo company on api.gusto-demo.com using the client_id/secret the portal generates. Real Gusto accounts can't connect at this stage.",
+   "limits": [
+    "Keys work only in the sandbox (api.gusto-demo.com)",
+    "In demo, calls outside your assigned scopes still succeed; the same calls return 403 in production",
+    "Access tokens expire after 2 hours; refresh tokens work only once",
+    "200 requests/min per access token"
+   ],
+   "time_to_reach": "30-60 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8",
+    "f21",
+    "f27",
+    "f30"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Sandbox team access (no production test-user mode)",
+   "unlocks": "Teammates you invite to your developer organization can work on the app and test against sandbox demo companies. The docs describe no allowlist of real users and no limited production mode before approval.",
+   "limits": [
+    "Sandbox data only; real customer accounts need production keys",
+    "No install or user cap found for unreviewed apps (absence of evidence, not confirmed)"
+   ],
+   "time_to_reach": "Minutes after Gate 1",
+   "requires_review": false,
+   "evidence_ids": [
+    "f9",
+    "f7",
+    "f31",
+    "f38"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production keys (Production Pre-Approval + Security Review + QA)",
+   "unlocks": "Gusto's Developer Relations team issues production credentials. Gusto admins at any customer company can then authorize your app, limited to the scopes Gusto assigns during review.",
+   "limits": [
+    "Scopes are assigned by Gusto during review and enforced in production",
+    "Changing production redirect URIs requires contacting Gusto support",
+    "Only primary or full-access admins can authorize, and each authorization covers one company",
+    "There is no public marketplace listing step; any marketing after approval is up to you"
+   ],
+   "time_to_reach": "Not published; likely weeks",
+   "requires_review": true,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f11",
+    "f12",
+    "f15",
+    "f16",
+    "f18",
+    "f19",
+    "f25",
+    "f28",
+    "f29"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Confirm your use case qualifies",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Gusto only gives API access to App Integration partners (accounting, ATS, performance, time tracking and business-operations software serving shared customers) and Embedded Payroll partners. If you are a Gusto customer wiring up your own company, Gusto won't approve you; use the Gusto CLI or MCP server instead.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Gusto says building before approval is at your own risk, so decide this first"
+   ],
+   "evidence_ids": [
+    "f1",
+    "f4",
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a Developer Portal account and organization",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Sign up at dev.gusto.com and set up your Organization. To add teammates, go to the Organizations tab, then Team. You need this account before you can submit the Production Pre-Approval application.",
+   "url": "https://dev.gusto.com",
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "The portal is behind a Cloudflare challenge, so automated agents may not be able to reach it; do this in a normal browser"
+   ],
+   "evidence_ids": [
+    "f5",
+    "f9",
+    "f35"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Create the application with your redirect URI",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Create a new application in the portal. Enter at least one redirect URI: paste the exact callback URL shown in your Composio auth config. When you create the app, the portal generates a client_id and secret. These are sandbox keys.",
+   "url": "https://dev.gusto.com",
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "The redirect URI must match exactly; wildcards and URIs with fragments (#) aren't supported",
+    "You can edit sandbox redirects in the portal, but production redirect changes go through Gusto support"
+   ],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a demo company",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the portal, create a demo company so you have sandbox data to authorize against. Sign in as that company's admin when you test OAuth.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f8",
+    "f25"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Configure Composio with your sandbox credentials and test the connection",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Enter the client_id and secret in a Composio auth config for the gusto toolkit. Run an authorization as the demo company admin and finish within 10 minutes, because the authorization code expires after that. Call GET /v1/token_info to see which scopes the token carries.",
+   "url": null,
+   "values": [],
+   "est_time": "15-30 min",
+   "gotchas": [
+    "Sandbox keys work only against api.gusto-demo.com. Check that your Composio auth config points at the demo environment, not api.gusto.com",
+    "Refresh tokens work only once; always store the new refresh token returned on each refresh"
+   ],
+   "evidence_ids": [
+    "f26",
+    "f27",
+    "f21",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Pin the API version",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Send X-Gusto-API-Version: v2026-06-15, the current stable version. v2025-06-15 is retired after November 15, 2026 and returns 406 after that.",
+   "url": null,
+   "values": [
+    {
+     "label": "X-Gusto-API-Version",
+     "value": "v2026-06-15"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f33",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Submit the Production Pre-Approval application",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Apply through the Production Pre-Approval form (a Qualtrics form) linked from the 'App Integrations vs. Embedded Payroll' docs page. Embedded Payroll products use a separate contact page and the Partnerships team. Describe your use case precisely, because Gusto assigns your scopes from it.",
+   "url": "https://docs.gusto.com/app-integrations/docs/app-integrations-vs-embedded-payroll",
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [
+    "Gusto states that Pre-Approval is not a formality"
+   ],
+   "evidence_ids": [
+    "f5",
+    "f17",
+    "f2",
+    "f18",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Prepare Security Review materials",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Collect a SOC 2 Type 2, ISO 27001 or PCI DSS audit, penetration test reports, security and incident-response contacts, and your privacy and data-retention policies. If you have no formal audit, an agent can draft your answers on background checks, MFA, encryption, vulnerability scanning, bug bounty and the privacy policy for you to review and confirm.",
+   "url": null,
+   "values": [],
+   "est_time": "1-5 days",
+   "gotchas": [],
+   "evidence_ids": [
+    "f12",
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Wait for Partnerships review and Security Review",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "The Partnerships team reviews your application. If they approve it, Gusto's GRC (governance, risk and compliance) team starts the Security Review. Gusto emails you next steps; it publishes no timeline.",
+   "url": null,
+   "values": [],
+   "est_time": "Unknown (likely weeks)",
+   "gotchas": [],
+   "evidence_ids": [
+    "f15",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Complete the Partner Checklist and pass QA",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Complete the Partner Checklist and share it with Gusto for the Integrated App review. Gusto runs a QA review of your build. Test your assigned scopes in demo before this step.",
+   "url": null,
+   "values": [],
+   "est_time": "Several hours plus wait",
+   "gotchas": [],
+   "evidence_ids": [
+    "f10",
+    "f11",
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Receive production keys and switch Composio to them",
+   "owner": "you",
+   "gate": 3,
+   "detail": "After approval, Gusto's Developer Relations team issues production credentials. Put them in your Composio auth config, point it at production (api.gusto.com), and check your granted scopes in the Developer Portal. To change production redirect URIs, contact Gusto support.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min",
+   "gotchas": [
+    "Any call outside your assigned scopes returns 403 in production",
+    "To add scopes later, email Gusto; approval is case by case"
+   ],
+   "evidence_ids": [
+    "f7",
+    "f19",
+    "f28",
+    "f39"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Use case in a supported App Integration category, or an Embedded Payroll partnership",
+   "gate": 3,
+   "detail": "Gusto doesn't support customers connecting their own systems.",
+   "evidence_ids": [
+    "f1",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Developer Portal account and organization",
+   "gate": 1,
+   "detail": "Required to create apps and to submit the Pre-Approval application.",
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "At least one exact redirect URI",
+   "gate": 1,
+   "detail": "No wildcards and no fragments.",
+   "evidence_ids": [
+    "f6",
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Approved Production Pre-Approval",
+   "gate": 3,
+   "detail": "Gusto won't provide implementation support, a QA review or production keys without it.",
+   "evidence_ids": [
+    "f2",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Security Review package",
+   "gate": 3,
+   "detail": "A SOC 2 Type 2, ISO 27001 or PCI DSS audit plus pen test reports, or answers to Gusto's security questionnaire; also a privacy policy and data-retention policies.",
+   "evidence_ids": [
+    "f13",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Completed Partner Checklist and a passed QA review",
+   "gate": 3,
+   "detail": "Required before Gusto issues production keys.",
+   "evidence_ids": [
+    "f10",
+    "f11"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "companies:read",
+   "tier": "unknown",
+   "effect": "Composio default. Gusto assigns scopes during review based on your use case, so this isn't guaranteed.",
+   "evidence_ids": [
+    "f18",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "employees:read",
+   "tier": "unknown",
+   "effect": "Composio default. Listed in a community guide. Gusto must assign it during review.",
+   "evidence_ids": [
+    "f18",
+    "f24"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "payrolls:read",
+   "tier": "unknown",
+   "effect": "Composio default, but Gusto's docs don't confirm it. Gusto must assign it during review.",
+   "evidence_ids": [
+    "f18",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "employees:write",
+   "tier": "unknown",
+   "effect": "Write access appears in a community list. Expect Gusto to look closely at whether your use case needs it.",
+   "evidence_ids": [
+    "f24",
+    "f20"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "payroll_digests:read / payroll_digests:write",
+   "tier": "restricted",
+   "effect": "Gated. A Gusto representative must enable these on your application before you can use them.",
+   "evidence_ids": [
+    "f22"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Pre-Approval rejected, or no response",
+   "cause": "Your use case isn't a supported partner category (for example, a customer connecting its own company).",
+   "fix": "Use the Gusto CLI or MCP server for direct-customer use, or reframe the product as an integration for shared customers in a supported category.",
+   "contact": null,
+   "evidence_ids": [
+    "f1",
+    "f4",
+    "f2"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Sandbox keys fail against api.gusto.com, or production users can't connect",
+   "cause": "Portal keys are sandbox-only. Production keys require approval.",
+   "fix": "Test against api.gusto-demo.com until Developer Relations issues production keys.",
+   "contact": null,
+   "evidence_ids": [
+    "f7",
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "403 Forbidden in production on calls that worked in demo",
+   "cause": "Demo doesn't enforce scopes; production rejects calls outside your assigned scopes.",
+   "fix": "Check scopes with GET /v1/token_info or in the Developer Portal, and email Gusto to request additions.",
+   "contact": null,
+   "evidence_ids": [
+    "f19",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "User can't authorize the app",
+   "cause": "Only primary or full-access admins can authorize. Tokens are limited to one company each.",
+   "fix": "Have a full-access admin authorize. Multi-company admins must authorize each company separately.",
+   "contact": null,
+   "evidence_ids": [
+    "f25",
+    "f29"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Redirect URI mismatch error",
+   "cause": "The redirect URI must match exactly; wildcards and fragments aren't supported.",
+   "fix": "Paste the exact Composio callback URL. For production URIs, ask Gusto support to change them.",
+   "contact": null,
+   "evidence_ids": [
+    "f28"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "406 errors after November 15, 2026",
+   "cause": "API version v2025-06-15 has been retired.",
+   "fix": "Send X-Gusto-API-Version: v2026-06-15.",
+   "contact": null,
+   "evidence_ids": [
+    "f33",
+    "f34"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "429 Too Many Requests",
+   "cause": "You exceeded the limit of 200 requests per minute per access token.",
+   "fix": "Back off and spread requests out.",
+   "contact": null,
+   "evidence_ids": [
+    "f30"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "gusto",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "companies:read",
+   "employees:read",
+   "payrolls:read"
+  ],
+  "note": "Composio has no managed OAuth app for Gusto, so you must register your own app. Until Gusto approves you, that app works only against the sandbox, so real customer connections depend on passing Gusto's partner approval. Composio's default scopes aren't guaranteed: Gusto assigns scopes during review. Paste Composio's callback URL as the app's redirect URI exactly."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Gusto's docs say the API is restricted to App Integration and Embedded Payroll partners, and direct customers should use the Gusto CLI or MCP server instead.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "The Gusto API is currently restricted to Gusto App Integration and Embedded Payroll partners.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Review for an Integrated App needs a completed Partner Checklist shared with Gusto; Embedded Payroll products go through the Partnerships team instead.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "The review process for an Integrated App requires the Partner Checklist created in the previous stage to be completed and shared with",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Gusto requires a QA review plus an approved Production Pre-Approval application before it issues production keys for any build using the API.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "Gusto requires a quality review (\"QA\") and an approved Production Pre-Approval application for all builds using our API before we issue production keys.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Security Review is also required for production access, whether the integration is direct or through a Unified API partner.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/security-review",
+   "quote": "an approved Production Pre-Approval and subsequent Security Review is required.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Security Review materials include SOC 2 Type 2, ISO 27001, or PCI DSS audits, penetration test reports, security and incident response contacts, and privacy and retention policies.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/security-review",
+   "quote": "Penetration test report(s)",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Without a formal audit, Gusto asks about background checks, MFA, encryption, vulnerability scanning, bug bounty, a privacy policy, and many other controls.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/security-review",
+   "quote": "If you do not have a formal security audit",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Partnerships reviews the Production Pre-Approval; if approved, the GRC team starts the Security Review. Gusto emails next steps. No stated review timeline was found.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/security-review",
+   "quote": "Our Partnerships team will review your application and if approved, our GRC team will then kick off your Security Review.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "Gusto's docs describe no public marketplace listing or app-store review for App Integrations. The path to production is a private Pre-Approval, QA, and Security Review, and the docs point to a Qualtrics form to apply. Launch-stage marketing (website, marketplace, press) is the developer's job after approval.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "You'll want to update your website or marketplace and publish support content for visibility.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "The App Integrations vs. Embedded page links the Production Pre-Approval form for App Integrations and a separate contact page for Embedded Payroll.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/app-integrations-vs-embedded-payroll",
+   "quote": "To apply for an App Integration, please click here",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "During review Gusto assigns API scopes based on the integration use case; these must be tested in demo and are enforced in production after approval.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/scopes",
+   "quote": "During review, all applications will be assigned API scopes based on your integration use-case.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "API calls outside the assigned scopes are rejected in production; developers can view granted scopes in the Developer Portal and request changes after launch by emailing Gusto.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/scopes",
+   "quote": "Any API call made outside of your assigned scope in production will be rejected.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "Production access requires an approved Production Pre-Approval and Security Review; Gusto says it is not a formality and that building before approval is at the developer's risk.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "Production Pre-Approval is not a formality.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Scope names follow resource:action format (e.g. employees:read); Gusto recommends requesting the minimum needed.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/scopes",
+   "quote": "Gusto uses scopes that refer to the resource they grant access to, followed by the action",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "In the Embedded docs, scopes are not enforced in demo; requests outside scope succeed there but return 403 in production. GET /v1/token_info shows a token's scopes.",
+   "source_url": "https://docs.gusto.com/embedded-payroll/docs/api-fundamentals",
+   "quote": "Requests outside assigned scopes succeed in demo but return 403 Forbidden in production.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "Some scopes, such as payroll_digests:read and payroll_digests:write, are gated and must be enabled by a Gusto representative before use.",
+   "source_url": "https://docs.gusto.com/embedded-payroll/changelog/added-payroll-digests-api-for-multi-company-payroll-monitoring",
+   "quote": "These scopes are gated. Contact your Gusto representative to have them enabled on your application before integrating.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "A community guide lists employees:read, employees:write and companies:read as scopes; Gusto's own docs did not publish a full scope list.",
+   "source_url": "https://www.stitchflow.com/user-management/gusto/api",
+   "quote": "employees:read | Read employee records including personal info, job details, and status.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Only primary admins or full-access admins on a Gusto account can enable and authorize a new app; accountants and multi-company admins need to plan for this.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+   "quote": "Only primary admins or full access admins on the Gusto account can enable and authenticate a new application’s access",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "The authorization code expires after 10 minutes; the authorize URL takes client_id, redirect_uri, response_type=code and state.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+   "quote": "Expiration Time: 10 minutes",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Access tokens expire 2 hours after issue; refresh tokens are single-use, so each refresh returns a new refresh token.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+   "quote": "Access tokens expire 2 hours after they are issued.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Redirect URIs must be exact: wildcards and URIs with fragments are unsupported. Sandbox redirects can be edited in the dev portal; production redirect changes go through Gusto support.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+   "quote": "OAuth2 does not support wildcard URIs or URIs with fragments (e.g #).",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Multi-company admins must go through OAuth separately for each company, because access tokens are restricted to a single company since v2023-05-01.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/oauth2",
+   "quote": "a multi-company administrator must go through OAuth individually for each company they wish to authorize.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "Without approval Gusto will not give implementation support, QA review, or issue production keys.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "Without that approval, we cannot provide implementation support, QA review, or issue production keys.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Gusto's API rate limit is 200 requests per minute, measured over a 60-second rolling window per OAuth grant's access token; excess requests get 429.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/rate-limits",
+   "quote": "The Gusto API rate limit is currently 200 requests per minute.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "No install cap or user limit for unreviewed or unlisted apps was found in Gusto's docs or changelogs. The 200 req/min limit is the only documented ceiling. This is an absence in what I checked, not a confirmed fact.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "The v2025-06-15 API version is retired after November 15, 2026, and returns 406 after that. The current stable version is v2026-06-15.",
+   "source_url": "https://docs.gusto.com/app-integrations/v2024-04-01/changelog/v2025-06-15-deprecation",
+   "quote": "After November 15, 2026, API version v2025-06-15 will be retired and become unusable.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "The June 2026 changelog says v2026-06-15 is now generally available and stable, set via the X-Gusto-API-Version header.",
+   "source_url": "https://docs.gusto.com/app-integrations/v2024-04-01/changelog/june-2026",
+   "quote": "API version v2026-06-15 is now generally available and marked as a stable release.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "The developer portal (dev.gusto.com) returns a Cloudflare challenge to unauthenticated fetches, so the sign-up and application forms could not be inspected.",
+   "source_url": "https://dev.gusto.com",
+   "quote": "Just a moment... Enable JavaScript and cookies to continue",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f38",
+   "claim": "A Prismatic connector guide says the Redirect URI for its own callback is https://oauth2.prismatic.io/callback and that new apps start in the demo environment until production approval.",
+   "source_url": "https://prismatic.io/docs/components/gusto/",
+   "quote": "Gusto restricts new app integrations to a demo environment until the app has been reviewed and approved for production access.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f39",
+   "claim": "A Merge guide says a partner uses its own Gusto developer app so its branding appears in the OAuth flow; Gusto provisions production credentials after approval.",
+   "source_url": "https://help.merge.dev/articles/10354314-gusto-how-do-i-set-up-my-integration",
+   "quote": "Your own Gusto developer app will be used to authenticate your customers, allowing your branding to appear in the OAuth flow.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Gusto's own docs say the 'App Integration' track (for software that pushes or pulls data for shared customers) is for accounting, ATS, performance, time tracking and business-operations software; direct customers connecting their own systems are not supported.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "Your use case maps to a supported category",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "A Developer Portal account is needed to complete the Production Pre-Approval application, and it is the first onboarding step; the application itself is submitted through a Qualtrics form linked from the docs.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "You must have a Developer Portal account to complete the application.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Creating an app in the portal requires at least one redirect URI; multiple redirects can go on one app. The portal generates a client_id and secret on creation.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "To create an application, you will need to provide at least one(1) redirect URI.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Keys issued through the developer portal work only in the sandbox (api.gusto-demo.com); production keys come later from Gusto's Developer Relations team after integration approval.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "The API keys initially accessible from Gusto's Developer Portal are for our sandbox environment only",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "After creating an app, a demo company must be created so the OAuth2 connection can be tested against sandbox data.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "you will need to create a demo company",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Team members can be invited to the developer account from the Organizations tab under Team.",
+   "source_url": "https://docs.gusto.com/app-integrations/docs/introduction",
+   "quote": "You can invite team members to join your developer account, too.",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "Gusto publishes no timeline for Production Pre-Approval, the Security Review, QA, or production key issuance by Developer Relations.",
+  "Gusto doesn't document common reasons Pre-Approval applications are rejected.",
+  "Gusto doesn't publish a full scope list. Its docs don't confirm Composio's default scopes (companies:read, employees:read, payrolls:read).",
+  "Can Composio's gusto toolkit point at the sandbox (api.gusto-demo.com) for testing? The authorize and token URLs on record are production (api.gusto.com).",
+  "No install or user cap for unreviewed apps was found. Gusto may simply not document one, so this isn't confirmed.",
+  "It's unknown whether creating a portal app requires an org admin, a paid plan, or business verification. The portal was behind a bot challenge and couldn't be inspected.",
+  "Listing criteria for Gusto's public integrations directory couldn't be read because the page was behind a bot challenge."
+ ],
+ "slug": "gusto_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T18:44:27+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 45,
+  "probes_run": 3,
+  "research_seconds": 142,
+  "est_cost_usd": 0.3244,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0605,
+   "claude-opus-5-5": 0.2639
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 16,
+    "out": 15096,
+    "cache_read": 344401,
+    "cache_write": 90061,
+    "search": 4
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 10222,
+    "cache_read": 0,
+    "cache_write": 11887,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

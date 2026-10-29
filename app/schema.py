@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 EvidenceStatus = Literal["tested", "probed", "official_doc", "community", "inferred"]
 Difficulty = Literal["instant", "self_serve", "light_review", "heavy_review"]
@@ -152,6 +152,9 @@ class ComposioInfo(BaseModel):
     )
 
 
+_FINDING_CATEGORIES = ("gate1", "gate2", "gate3", "step", "requirement", "scope", "blocker", "app_info", "other")
+
+
 class Finding(BaseModel):
     """One cited fact gathered during research. This is the hand-off unit
     between the (cheap) research phase and the (strong) synthesis phase --
@@ -165,6 +168,15 @@ class Finding(BaseModel):
     source_url: Optional[str] = None
     quote: Optional[str] = Field(default=None, description="Short verbatim excerpt (<= 300 chars) supporting the claim.")
     status: EvidenceStatus
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _unknown_category_is_other(cls, v):
+        # The category is only a routing hint for the writer. A cheap researcher
+        # occasionally invents a label ("rate_limit"); the eval saw that abort a
+        # whole run after 3 retries. File it under "other" instead -- the
+        # evidence fields (status, url, quote) stay strictly validated.
+        return v if v in _FINDING_CATEGORIES else "other"
 
 
 class ResearchFindings(BaseModel):

@@ -1,0 +1,864 @@
+{
+ "app": {
+  "name": "ServiceNow",
+  "website": "https://www.servicenow.com",
+  "developer_portal_url": "https://developer.servicenow.com/dev.do",
+  "oauth_docs_url": "https://www.servicenow.com/docs/",
+  "category": "ITSM / Enterprise service management"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "ServiceNow OAuth clients live inside each customer's own instance. An instance admin creates one in System OAuth > Application Registry, and ServiceNow does not review it. Composio has no managed app for ServiceNow, so you always bring your own client, and every customer instance needs its own registry record. The ServiceNow Store is a separate, optional route. It requires Build Partner membership and certification that takes weeks.",
+  "hands_on_effort": "30-60 min per instance; Store publishing (optional) is days of work plus partner-program onboarding",
+  "time_to_first_connection": "About 30 minutes once you have an instance where you are admin",
+  "approval_wait": "None for instance-level OAuth clients (no provider review found). An optional Store listing typically takes 3-5 weeks of certification after Build Partner admission."
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Registry record on your own instance (e.g. personal developer instance)",
+   "unlocks": "You can connect your own ServiceNow user to your agent through Composio using a client ID/secret from your instance's Application Registry.",
+   "limits": [
+    "Default access token lifetime 30 minutes; refresh token 100 days (editable in the registry record)",
+    "Refresh token only issued if Refresh Token Lifespan > 0",
+    "Some users report direct login to a personal developer instance failing; sign in via the developer portal instead"
+   ],
+   "time_to_reach": "About 30 minutes",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f11",
+    "f13"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Other users on the same instance",
+   "unlocks": "Any user with a login on that instance can authorize through the same registry record. No separate test-user allowlist or user cap was found.",
+   "limits": [
+    "Refresh tokens are reportedly not renewed, so users must re-authorize when the refresh-token lifespan runs out (100 days by default)",
+    "Which APIs users can reach is limited by the OAuth profile/scopes on the registry record",
+    "No user caps or dev-mode restrictions found (unconfirmed)"
+   ],
+   "time_to_reach": "Immediate after Gate 1",
+   "requires_review": false,
+   "evidence_ids": [
+    "i1",
+    "f7",
+    "f11",
+    "f12"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Per-customer instance registration (optional: ServiceNow Store listing)",
+   "unlocks": "Any customer can connect once their instance admin creates a registry record with the Composio callback URL and shares the client ID/secret and instance subdomain. This needs no ServiceNow review. A ServiceNow Store listing is only needed to distribute an in-platform app. It requires Build Partner status, a vendor instance and Store certification (App Review + Listing Review).",
+   "limits": [
+    "One registry record per customer instance; no central ServiceNow app registry found",
+    "Store: Build Partner required, with a reported fee of about USD 5,000 (unverified)",
+    "Store: private application scope required; integration-only apps discouraged",
+    "Store: stay within the n-3 release window; recertification may be needed"
+   ],
+   "time_to_reach": "About 30 minutes per customer instance; the Store route takes partner admission plus a typical 3-5 weeks of certification",
+   "requires_review": false,
+   "evidence_ids": [
+    "i2",
+    "f15",
+    "f16",
+    "f18",
+    "f21",
+    "f26",
+    "f27",
+    "f31",
+    "f32"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Get a ServiceNow instance where you are admin",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Use an existing instance where you have admin rights, or request a personal developer instance from the ServiceNow developer portal. Note the instance subdomain (the part before .service-now.com).",
+   "url": "https://developer.servicenow.com/dev.do",
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [
+    "Some users found direct login to their developer instance failing and had to sign in through the developer portal.",
+    "The developer site needs JavaScript enabled."
+   ],
+   "evidence_ids": [
+    "f4",
+    "f33"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Confirm OAuth is active on the instance",
+   "owner": "you",
+   "gate": 1,
+   "detail": "The OAuth 2.0 plugin is active by default on new and upgraded instances. Check that the system property com.snc.platform.security.oauth.is.active is set to true. If it isn't, the instance won't issue access tokens.",
+   "url": null,
+   "values": [
+    {
+     "label": "System property",
+     "value": "com.snc.platform.security.oauth.is.active = true"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a ServiceNow auth config in Composio",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create an auth config for the servicenow toolkit using OAuth2 with your own credentials. Composio has no managed app here. Copy the callback (redirect) URL that Composio shows.",
+   "url": null,
+   "values": [
+    {
+     "label": "Toolkit",
+     "value": "servicenow"
+    },
+    {
+     "label": "Default scope",
+     "value": "useraccount"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "title": "Create the OAuth endpoint in the Application Registry",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In the instance, go to System OAuth > Application Registry > New and choose 'Create an OAuth API endpoint for external clients'. Enter a unique Name and the Authorized Redirect URI.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Leave 'Public client' unchecked unless your client sends PKCE. Checking it enables PKCE, which requires code_challenge/code_verifier and disables the implicit grant."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f6",
+    "f14"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Set token lifespans",
+   "owner": "you",
+   "gate": 1,
+   "detail": "On the registry record, make sure Refresh Token Lifespan is greater than zero, or no refresh token is issued. The defaults are 30 minutes for the access token and 100 days for the refresh token. One third-party guide recommends about one year for the refresh token, because ServiceNow reportedly doesn't renew refresh tokens.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "When the refresh token expires, users must re-authorize."
+   ],
+   "evidence_ids": [
+    "f11",
+    "f12",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save and copy the client credentials",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Save the record. The instance generates the Client ID and Client Secret automatically. Copy both.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f5"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Optionally restrict API access with an OAuth profile",
+   "owner": "you",
+   "gate": 1,
+   "detail": "To limit which ServiceNow APIs the agent can reach, add an OAuth profile on the registry record and choose the allowed API endpoints under OAuth Scopes. Choosing scopes doesn't trigger any review.",
+   "url": null,
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f7",
+    "f36"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Enter credentials in Composio and test the connection",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Enter the instance subdomain, Client ID, Client Secret and scope useraccount in the Composio auth config. Then run a test authorization. Authorization goes to https://{subdomain}.service-now.com/oauth_auth.do and the token exchange goes to /oauth_token.do.",
+   "url": null,
+   "values": [
+    {
+     "label": "Authorization URL",
+     "value": "https://{subdomain}.service-now.com/oauth_auth.do"
+    },
+    {
+     "label": "Token URL",
+     "value": "https://{subdomain}.service-now.com/oauth_token.do"
+    },
+    {
+     "label": "Scope",
+     "value": "useraccount"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "A missing or misspelled scope causes an invalid-scope error."
+   ],
+   "evidence_ids": [
+    "f1",
+    "f9",
+    "f10"
+   ],
+   "support": "community"
+  },
+  {
+   "title": "Let other users on the instance connect",
+   "owner": "you",
+   "gate": 2,
+   "detail": "Any user with a login on the same instance can now authorize through your Composio auth config. No allowlist was found, so access depends on their instance account and the OAuth profile's endpoint scopes.",
+   "url": null,
+   "values": [],
+   "est_time": "Immediate",
+   "gotchas": [],
+   "evidence_ids": [
+    "i1",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Repeat registration on each customer instance",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "For each customer, an agent can draft a short install guide covering steps 2 and 4-7 for that customer's instance admin, using the Composio callback URL. The admin creates the registry record and sends back the subdomain and client credentials, which you add to Composio for that customer.",
+   "url": null,
+   "values": [],
+   "est_time": "30 min per customer",
+   "gotchas": [
+    "ServiceNow has no central app registry; a record on one instance doesn't work on another."
+   ],
+   "evidence_ids": [
+    "i2",
+    "f2",
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional Store track) Join the ServiceNow Partner Program",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Only if you want a ServiceNow Store listing: your company must become a Build Partner through the Technology Partner Portal. This is also how you get a vendor instance. Admission is a company-level commercial process that runs on ServiceNow's schedule.",
+   "url": null,
+   "values": [],
+   "est_time": "Weeks (company process)",
+   "gotchas": [
+    "The reported fee is about USD 5,000; this is unverified and may be out of date."
+   ],
+   "evidence_ids": [
+    "f15",
+    "f17",
+    "f28",
+    "f29",
+    "f31"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional Store track) Build the scoped app and prepare certification docs",
+   "owner": "agent",
+   "gate": 3,
+   "detail": "Build the app in a private application scope on the vendor instance. It needs an application menu, a contact support module and a working use case. Draft the design document, test plan with results and installation guide, then run the Certification Self-Test Tool.",
+   "url": null,
+   "values": [],
+   "est_time": "Days",
+   "gotchas": [
+    "Integration-only apps with no in-platform code are discouraged.",
+    "The most common failures are missing ACLs and roles on modules, UI pages, client-callable script includes and tables."
+   ],
+   "evidence_ids": [
+    "f16",
+    "f19",
+    "f22",
+    "f23",
+    "f24",
+    "f25",
+    "f26",
+    "f32"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional Store track) Submit App Review and Listing Review",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Upload the app from the vendor instance's application record to the Store. Then submit both the App Review and Listing Review forms in the Store Publisher Portal, including listing marketing materials and demo videos.",
+   "url": null,
+   "values": [],
+   "est_time": "1-2 hours",
+   "gotchas": [],
+   "evidence_ids": [
+    "f16",
+    "f18",
+    "f20",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "(Optional Store track) Wait for certification",
+   "owner": "provider_wait",
+   "gate": 3,
+   "detail": "Certification typically takes three to five weeks from submission to publish-ready, depending on app size, documentation quality and how fast you respond to feedback. Send questions to certifiers@servicenow.com.",
+   "url": null,
+   "values": [],
+   "est_time": "3-5 weeks",
+   "gotchas": [],
+   "evidence_ids": [
+    "f21",
+    "f29"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Admin access to a ServiceNow instance",
+   "gate": 1,
+   "detail": "The OAuth client is created inside the instance's Application Registry; a personal developer instance works.",
+   "evidence_ids": [
+    "f2",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "OAuth active on the instance",
+   "gate": 1,
+   "detail": "OAuth 2.0 plugin active (default) and com.snc.platform.security.oauth.is.active set to true.",
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Unique name and Authorized Redirect URI",
+   "gate": 1,
+   "detail": "The registry record needs a unique Name and the Composio callback as the Authorized Redirect URI.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Refresh Token Lifespan > 0",
+   "gate": 1,
+   "detail": "Otherwise no refresh token is issued.",
+   "evidence_ids": [
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Customer instance admin cooperation",
+   "gate": 3,
+   "detail": "Each customer's admin must create a registry record on their own instance.",
+   "evidence_ids": [
+    "i2"
+   ],
+   "support": "unsupported"
+  },
+  {
+   "item": "Build Partner membership and vendor instance (Store only)",
+   "gate": 3,
+   "detail": "Required only to list on the ServiceNow Store.",
+   "evidence_ids": [
+    "f15",
+    "f16",
+    "f17"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Certification documents (Store only)",
+   "gate": 3,
+   "detail": "Design document, test plan with results, customer installation guide, listing materials and demo videos. The self-test checklist also covers an app privacy policy.",
+   "evidence_ids": [
+    "f19",
+    "f20",
+    "f23"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Private application scope (Store only)",
+   "gate": 3,
+   "detail": "Global-scope apps cannot be published to the Store.",
+   "evidence_ids": [
+    "f32"
+   ],
+   "support": "community"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "useraccount",
+   "tier": "basic",
+   "effect": "Composio's default scope, commonly used in integration guides. A missing or misspelled value causes invalid-scope errors. No review is tied to it.",
+   "evidence_ids": [
+    "f1",
+    "f9"
+   ],
+   "support": "community"
+  },
+  {
+   "scope": "OAuth profile API endpoint scopes",
+   "tier": "unknown",
+   "effect": "Optional per-profile restriction to specific ServiceNow API endpoints. Configured by the instance admin; no sensitive/restricted classification or review was found.",
+   "evidence_ids": [
+    "f7",
+    "f36"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Token requests fail / no access token issued",
+   "cause": "The OAuth system property com.snc.platform.security.oauth.is.active is not active.",
+   "fix": "Set the property to true in the instance.",
+   "contact": null,
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "invalid_scope error during authorization",
+   "cause": "Scope missing or misspelled.",
+   "fix": "Set the scope to useraccount in the Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "f9"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "No refresh token returned, or users suddenly have to reconnect",
+   "cause": "Refresh Token Lifespan is 0, or the refresh token reached its lifespan (100 days by default) and was not renewed.",
+   "fix": "Set Refresh Token Lifespan > 0 and consider raising it (e.g. about one year).",
+   "contact": null,
+   "evidence_ids": [
+    "f11",
+    "f12",
+    "f13"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Authorization fails asking for code_challenge",
+   "cause": "'Public client' is checked, which enforces PKCE.",
+   "fix": "Uncheck Public client for a confidential client, or send PKCE parameters.",
+   "contact": null,
+   "evidence_ids": [
+    "f14"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Cannot log into personal developer instance directly",
+   "cause": "Reported login issue with developer instances.",
+   "fix": "Sign in through the ServiceNow developer portal instead.",
+   "contact": null,
+   "evidence_ids": [
+    "f4"
+   ],
+   "support": "community"
+  },
+  {
+   "symptom": "Store certification rejected",
+   "cause": "Usually access-control gaps (missing ACLs and roles), a missing contact support module, unsafe Jelly, or an integration-only app with no in-platform functionality.",
+   "fix": "Run the Certification Self-Test Tool, add ACLs, roles and a support module, and include a real in-platform use case.",
+   "contact": "certifiers@servicenow.com",
+   "evidence_ids": [
+    "f22",
+    "f24",
+    "f25",
+    "f26"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "servicenow",
+  "managed_oauth_available": false,
+  "default_scopes": [
+   "useraccount"
+  ],
+  "note": "Composio has no managed OAuth app for ServiceNow, so you need your own client from day one. OAuth is per instance: URLs use https://{subdomain}.service-now.com/oauth_auth.do and /oauth_token.do. Register Composio's callback URL as the Authorized Redirect URI on each instance's Application Registry record. ServiceNow doesn't review instance-level clients. The Store/Build Partner route is only for publishing an in-platform Store app."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio's toolkit record for ServiceNow reports no managed OAuth scheme, with OAuth2 mode defaulting to the useraccount scope and a Composio-hosted default redirect URI.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/servicenow",
+   "quote": null,
+   "status": "inferred",
+   "flags": [
+    "no probe was run against this host"
+   ]
+  },
+  {
+   "id": "f2",
+   "claim": "The OAuth client is created inside the customer's ServiceNow instance, under System OAuth > Application Registry, using the option to create an OAuth API endpoint for external clients.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/configure-oauth-in-servicenow/m-p/1648465",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "The OAuth 2.0 plugin is active by default; the system property com.snc.platform.security.oauth.is.active must also be active before access tokens can be generated.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/configure-oauth-in-servicenow/m-p/1648465",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "A personal developer instance is reported usable for external-app OAuth, but one user had to sign in through the developer portal when direct login failed.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/can-you-connect-external-apps-to-developer-instance/m-p/2504363",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "Client ID and client secret are generated automatically when the registry record is saved.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/configure-oauth-in-servicenow/m-p/1648465",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "The registry record requires a unique name and an Authorized Redirect URI.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/can-you-connect-external-apps-to-developer-instance/m-p/2504363",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Access is granted through an OAuth profile on the registry record, selecting API endpoints under OAuth Scopes.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/can-you-connect-external-apps-to-developer-instance/m-p/2504363",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f36",
+   "claim": "Scopes are chosen per OAuth profile by picking API endpoints; no sensitive/restricted classification or extra review is described.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/can-you-connect-external-apps-to-developer-instance/m-p/2504363",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "Composio's default scope is useraccount; a missing or misspelled scope produces an invalid-scope error.",
+   "source_url": "https://help.nicecxone.com/content/knowledgehub/generatetokens/generateservicenowoauthtokens.htm",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "Authorization and token endpoints are per-instance paths oauth_auth.do and oauth_token.do on the customer's service-now.com subdomain.",
+   "source_url": "https://help.salesforce.com/s/articleView?id=001115357&language=en_US&type=1",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Default token lifetimes are 30-minute access and 100-day refresh tokens, editable in the registry record.",
+   "source_url": "https://www.servicenow.com/community/itsm-forum/issue-with-refresh-token/m-p/441497",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "A third-party guide recommends a ~1 year refresh-token lifespan and states ServiceNow does not renew refresh tokens.",
+   "source_url": "https://help.nicecxone.com/content/knowledgehub/generatetokens/generateservicenowoauthtokens.htm",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "A refresh token is issued only when Refresh Token Lifespan is greater than zero.",
+   "source_url": "https://www.servicenow.com/community/developer-forum/how-to-generate-refresh-token/m-p/1568368",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Ticking Public client turns on PKCE, disabling implicit grant and requiring code_challenge/code_verifier.",
+   "source_url": "https://xqting.com/news/servicenow",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Publishing to the ServiceNow Store requires being a Build Partner.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": "you must be a Build Partner to list an application on the ServiceNow Store",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "The app must be built and uploaded from a Build Partner vendor instance via the Store publish action.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/uploading-your-application-to-the-store-publisher-portal/ba-p/2477377",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "A vendor instance is only granted through partner-program admission.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/the-technology-partner-program-the-store-and-scoped-apps-faq-s/ba-p/2267466",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "Store certification runs App Review and Listing Review tracks, each with its own form in the Store Publisher Portal.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "App Review asks for a design document, test plan with results, and a customer-facing installation guide.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Listing Review checks listing accuracy and branding; the listing includes marketing documentation and demo videos.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Certification typically takes three to five weeks from submission to publish-ready.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f22",
+   "claim": "The Certification Self-Test Tool is optional but shortens certification.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/using-the-certification-self-test-tool/ba-p/2477355",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Self-test manual checks include demo data hygiene, accessibility and the app privacy policy.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/using-the-certification-self-test-tool/ba-p/2477355",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "Commonly failed checks are dominated by access-control gaps.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/top-ten-failed-certification-checks/ba-p/2477461",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "Frequent issues include a missing contact support module and unsafe Jelly statements.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/top-ten-failed-certification-checks/ba-p/2477461",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f26",
+   "claim": "Integration-only apps are discouraged; minimum is an application menu, contact support module and working use case.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f27",
+   "claim": "Partners must stay within the n-3 release window, and recertification may be needed.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/the-technology-partner-program-the-store-and-scoped-apps-faq-s/ba-p/2267466",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f28",
+   "claim": "Joining the Technology Partner Program is a company-level commercial process on ServiceNow's schedule.",
+   "source_url": "https://www.ramisun.com/ramisun-blog-publish-app-servicenow-store.html",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f29",
+   "claim": "Partners register on the Technology Partner Portal; certification questions go to certifiers@servicenow.com.",
+   "source_url": "https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB0794197",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "Full certification requirements and templates sit in a Store Publisher Portal KB behind a separate login.",
+   "source_url": "https://www.servicenow.com/community/app-publisher-blog/guide-to-getting-your-app-certified-and-certification/ba-p/2477630",
+   "quote": null,
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "A third-party estimate puts the Build Partner fee near USD 5,000; unverified.",
+   "source_url": "https://www.timothywoodruff.com/pdfs/handbook-exports/publishing-your-servicenow-app.pdf",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f32",
+   "claim": "Store applications must be built in a private application scope.",
+   "source_url": "https://forshtec.com/cybersecurity-glossary/what-is-servicenow-store-app/",
+   "quote": null,
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f33",
+   "claim": "developer.servicenow.com loads but requires JavaScript; it is not a login wall.",
+   "source_url": "https://developer.servicenow.com/",
+   "quote": null,
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "i1",
+   "claim": "Since the OAuth client lives on the instance and no allowlist or user cap was found, any user with a login on that instance should be able to authorize through the same registry record.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  },
+  {
+   "id": "i2",
+   "claim": "Because registry records are per-instance and no central registry was found, each customer instance needs its own record created by its admin, with no ServiceNow review.",
+   "source_url": null,
+   "quote": null,
+   "status": "inferred",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "I couldn't read the official ServiceNow OAuth setup docs. The registry field names (Name, Authorized Redirect URI, Public client, Refresh Token Lifespan) come from community and third-party posts, so check them against your release's docs.",
+  "Endpoint behaviour (unknown client_id, scopes_supported) wasn't tested against a real instance.",
+  "No rate limits, user caps or dev-mode restrictions were found for instance-level OAuth clients. The absence of any provider review is not confirmed.",
+  "The 30-minute and 100-day token defaults, and the claim that refresh tokens aren't renewed, come from older posts. Check them on your release.",
+  "Whether one registry record can serve several customers isn't established. It appears to be strictly per instance.",
+  "The current Build Partner fee, tiers and certification timeline aren't confirmed from an official pricing page. The fee is a third-party estimate, and the timeline is from a 2023 community post.",
+  "Full Store requirements (KB0030070, privacy policy form) sit behind the Store Publisher Portal login and weren't seen."
+ ],
+ "slug": "servicenow_rep0",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-28T16:29:08+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [
+   "1 of 14 steps have no retrieved source",
+   "1 evidence items downgraded by validator"
+  ],
+  "sources_consulted": 51,
+  "probes_run": 4,
+  "research_seconds": 215,
+  "est_cost_usd": 0.3509,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0839,
+   "claude-opus-5-5": 0.267
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 12777,
+    "out": 29598,
+    "cache_read": 491077,
+    "cache_write": 122974,
+    "search": 5
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 10474,
+    "cache_read": 0,
+    "cache_write": 11491,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}

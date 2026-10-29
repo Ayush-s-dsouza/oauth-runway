@@ -1,0 +1,729 @@
+{
+ "app": {
+  "name": "Calendly",
+  "website": "https://calendly.com",
+  "developer_portal_url": "https://developer.calendly.com/",
+  "oauth_docs_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+  "category": "Scheduling"
+ },
+ "verdict": {
+  "difficulty": "self_serve",
+  "summary": "You create a Calendly OAuth app in Developer tools and can use it straight away. Calendly's docs describe no app review, verification or marketplace listing. The hard parts are technical: PKCE (S256) is required, refresh tokens are single-use and rotate, the client secret is shown only once, and webhooks only work for users on paid plans.",
+  "hands_on_effort": "30-60 min",
+  "time_to_first_connection": "15-20 min",
+  "approval_wait": "none documented"
+ },
+ "gates": [
+  {
+   "level": 1,
+   "name": "Sandbox app",
+   "unlocks": "Connect your own Calendly account through your own app while you build. Redirect URIs can be https, or http on localhost.",
+   "limits": [
+    "Exactly one redirect URI per app",
+    "Client secret and webhook signing key are shown only once",
+    "At least one scope must be selected; new apps get no API access outside the scopes they request",
+    "Calendly's docs don't say whether Sandbox apps have user or rate limits that Production apps don't"
+   ],
+   "time_to_reach": "10-15 min",
+   "requires_review": false,
+   "evidence_ids": [
+    "f2",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f16"
+   ]
+  },
+  {
+   "level": 2,
+   "name": "Other Calendly users (no separate test mode documented)",
+   "unlocks": "Other Calendly users can authorize your app. Calendly documents no test-user allowlist and no install cap for unreviewed apps.",
+   "limits": [
+    "No user cap or install cap is documented",
+    "Webhook subscriptions need the subscribing user to be on a paid Standard, Teams or Enterprise plan",
+    "Refresh tokens are single-use and rotate; reusing an old one returns invalid_grant",
+    "Access token lifetime is not documented"
+   ],
+   "time_to_reach": "Same as Gate 1 (no extra step documented)",
+   "requires_review": false,
+   "evidence_ids": [
+    "f24",
+    "f25",
+    "f18",
+    "f20",
+    "f21",
+    "f23"
+   ]
+  },
+  {
+   "level": 3,
+   "name": "Production app",
+   "unlocks": "Use the app with real customer data from any Calendly account. Calendly's docs describe no review, verification or listing step.",
+   "limits": [
+    "Production redirect URIs must use https",
+    "Enterprise-only endpoints: list activity log entries, delete invitee data, delete scheduled event data",
+    "A third-party source reports slow 'partner approvals'; Calendly's docs don't mention this"
+   ],
+   "time_to_reach": "10 min (create a second app set to Production)",
+   "requires_review": false,
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f24",
+    "f19",
+    "f31"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "title": "Decide whether you need your own app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Composio already offers a managed Calendly OAuth app, so you can start there. Register your own app if you want your name on the consent screen or need to control your own credentials. Use OAuth rather than a personal access token if more than one Calendly account will connect.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1",
+    "f35"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Log in and open Developer tools",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Log in to Calendly (or sign up), open Developer tools, then go to the OAuth apps tab. If you don't see the Developer menu, your account is still being migrated; manage OAuth apps at developer.calendly.com until that finishes.",
+   "url": "https://developer.calendly.com/",
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [
+    "Older docs describe a separate developer account that you sign up for with GitHub or Google. Check which sign-up path your account actually uses."
+   ],
+   "evidence_ids": [
+    "f2",
+    "f3",
+    "f4"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Pick minimal scopes and draft the configuration",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Map the actions your agent needs to Calendly scopes, for example scheduled_events:read, or webhooks:write if you subscribe to webhooks. A :write scope already includes the matching :read scope. Request as few scopes as possible, and leave out high-impact ones like organizations:write and data_compliance:write unless you really need them.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f13",
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a Sandbox OAuth app",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Click to create an app. Enter an app name (letters, numbers, hyphens and spaces only), exactly one redirect URI, and the environment type Sandbox. Then select at least one scope and click Create.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    },
+    {
+     "label": "Environment type",
+     "value": "Sandbox"
+    }
+   ],
+   "est_time": "5 min",
+   "gotchas": [
+    "Only one redirect URI is allowed per app.",
+    "Composio's toolkit API and its Calendly guide list different callback paths. Copy the exact one your Composio auth config shows."
+   ],
+   "evidence_ids": [
+    "f5",
+    "f6",
+    "f7"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Save the Client ID, Client secret and Webhook signing key right away",
+   "owner": "you",
+   "gate": 1,
+   "detail": "Copy all three values into a secrets manager before you leave the page. You can't view the client secret or the webhook signing key again, and Developer tools currently doesn't show the client ID again either.",
+   "url": null,
+   "values": [],
+   "est_time": "2 min",
+   "gotchas": [
+    "If you lose them, you may need to delete the app and create a new one."
+   ],
+   "evidence_ids": [
+    "f8",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a Composio auth config with your credentials",
+   "owner": "you",
+   "gate": 1,
+   "detail": "In Composio, create a Calendly auth config that uses your own OAuth app. Paste in the Client ID and Client secret, and add the same scopes you selected in Calendly, because Composio's default scope list is empty. The authorize URL is https://auth.calendly.com/oauth/authorize and the token URL is https://auth.calendly.com/oauth/token.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f1"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Run a test authorization with your own account",
+   "owner": "agent",
+   "gate": 1,
+   "detail": "Start a connection and approve it with your Calendly account. Check that the authorization request includes a PKCE S256 code challenge and that the token exchange sends code_verifier, with the client secret sent via HTTP Basic auth. Then call an endpoint covered by your scopes.",
+   "url": null,
+   "values": [],
+   "est_time": "5-10 min",
+   "gotchas": [
+    "Requests without a code challenge fail. Older docs say PKCE is optional, but the current docs make it mandatory."
+   ],
+   "evidence_ids": [
+    "f9",
+    "f10",
+    "f11",
+    "f34"
+   ],
+   "support": "verified"
+  },
+  {
+   "title": "Check refresh-token rotation handling",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "Each refresh revokes the old refresh token, so the new one must be saved every time. If a request returns invalid_grant (HTTP 400 or 401), the user needs to reauthorize; retrying won't help. Calendly's enforcement date was August 31, 2026, so rotation should already be in effect.",
+   "url": null,
+   "values": [],
+   "est_time": "10 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Check users' plan requirements",
+   "owner": "agent",
+   "gate": 2,
+   "detail": "GET and POST requests work on every plan, including Free. Webhook subscriptions need the subscribing user to be on a paid Standard, Teams or Enterprise plan. Activity log and data-deletion endpoints are Enterprise-only.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f18",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Create a separate Production app",
+   "owner": "you",
+   "gate": 3,
+   "detail": "Calendly recommends a separate Production app for real customer data. Create a new app with environment type Production, the same https Composio callback URL and the same scopes. Save its credentials and switch your Composio auth config over to them.",
+   "url": null,
+   "values": [
+    {
+     "label": "Redirect URI",
+     "value": "Composio callback URL (see the Composio callout on this page)"
+    },
+    {
+     "label": "Environment type",
+     "value": "Production"
+    }
+   ],
+   "est_time": "10 min",
+   "gotchas": [
+    "Production apps accept https redirect URIs only."
+   ],
+   "evidence_ids": [
+    "f6",
+    "f7",
+    "f8"
+   ],
+   "support": "sourced"
+  },
+  {
+   "title": "Plan for scope changes",
+   "owner": "you",
+   "gate": 3,
+   "detail": "If you add scopes later, edit them in Developer tools. Existing users then have to go through OAuth again, because Calendly has no separate flow for updating scopes.",
+   "url": null,
+   "values": [],
+   "est_time": "5 min",
+   "gotchas": [],
+   "evidence_ids": [
+    "f12",
+    "f17"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "requirements": [
+  {
+   "item": "Calendly account with access to Developer tools",
+   "gate": 1,
+   "detail": "Needed to create OAuth apps. A third-party guide says any Calendly account can create them.",
+   "evidence_ids": [
+    "f2",
+    "f30"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "PKCE with the S256 method",
+   "gate": 1,
+   "detail": "Every OAuth app must send a code challenge. Requests without one fail.",
+   "evidence_ids": [
+    "f9",
+    "f34"
+   ],
+   "support": "verified"
+  },
+  {
+   "item": "https redirect URI for Production",
+   "gate": 3,
+   "detail": "Sandbox also accepts http on localhost; Production accepts https only.",
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Paid plan for users who need webhooks",
+   "gate": 2,
+   "detail": "Standard, Teams or Enterprise is required on the account the webhook subscription is created for.",
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "item": "Refresh-token rotation handling",
+   "gate": 2,
+   "detail": "Save the new refresh token after every refresh. Reusing an old one returns invalid_grant.",
+   "evidence_ids": [
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "scheduled_events:read / scheduled_events:write",
+   "tier": "basic",
+   "effect": "Core scheduling access. The write scope includes read. No review is documented.",
+   "evidence_ids": [
+    "f13",
+    "f16"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "webhooks:read / webhooks:write",
+   "tier": "basic",
+   "effect": "Lets the app manage webhook subscriptions. The subscribing user needs a paid plan.",
+   "evidence_ids": [
+    "f13",
+    "f18"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "organizations:write",
+   "tier": "unknown",
+   "effect": "Can invite or remove organization members. It's high-impact, but Calendly gives it no special label and documents no extra review for it. Request it only if you need it.",
+   "evidence_ids": [
+    "f14",
+    "f15"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "data_compliance:write",
+   "tier": "unknown",
+   "effect": "Can delete invitee or event data. The matching endpoints are Enterprise-only. No extra review is documented.",
+   "evidence_ids": [
+    "f14",
+    "f19"
+   ],
+   "support": "sourced"
+  },
+  {
+   "scope": "activity_log:read",
+   "tier": "unknown",
+   "effect": "Exposes organization activity. The endpoint is Enterprise-only.",
+   "evidence_ids": [
+    "f14",
+    "f19"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "No Developer menu in Calendly",
+   "cause": "Your account is still being migrated to the new Developer tools.",
+   "fix": "Manage OAuth apps at developer.calendly.com for now.",
+   "contact": null,
+   "evidence_ids": [
+    "f3"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Authorization fails right away",
+   "cause": "The authorization request has no PKCE S256 code challenge.",
+   "fix": "Send code_challenge with method S256 and send code_verifier in the token exchange.",
+   "contact": null,
+   "evidence_ids": [
+    "f9",
+    "f10"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Lost client secret or webhook signing key",
+   "cause": "Calendly shows them only once, at creation.",
+   "fix": "Delete the app and create a new one, then update your Composio auth config.",
+   "contact": null,
+   "evidence_ids": [
+    "f8",
+    "f12"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "invalid_grant (HTTP 400/401) when refreshing",
+   "cause": "A refresh token that was already rotated was reused.",
+   "fix": "Save the new refresh token after every refresh. For users whose token is already invalid, make them reauthorize.",
+   "contact": null,
+   "evidence_ids": [
+    "f20",
+    "f21"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Production app rejects the redirect URI",
+   "cause": "Production apps accept https URIs only.",
+   "fix": "Use the https Composio callback URL.",
+   "contact": null,
+   "evidence_ids": [
+    "f6"
+   ],
+   "support": "sourced"
+  },
+  {
+   "symptom": "Webhook subscription fails for some users",
+   "cause": "Those users are on the Free plan.",
+   "fix": "The subscribing user must be on Standard, Teams or Enterprise; for others, poll the API instead.",
+   "contact": null,
+   "evidence_ids": [
+    "f18"
+   ],
+   "support": "sourced"
+  }
+ ],
+ "composio": {
+  "toolkit_slug": "calendly",
+  "managed_oauth_available": true,
+  "default_scopes": [],
+  "note": "Composio has a managed Calendly OAuth app, so you can start without registering your own. Composio's default scope list is empty, so set the scopes you need in the auth config either way. Switch to your own Calendly app when you want your name on the consent screen or need control of the credentials. Composio's toolkit API (v1 auth-apps/add) and its Calendly guide (v3 toolkits/auth/callback) list different callback paths, so copy the exact redirect URI your Composio dashboard shows."
+ },
+ "evidence": [
+  {
+   "id": "f1",
+   "claim": "Composio lists managed OAuth for Calendly with authorization URL https://auth.calendly.com/oauth/authorize and token URL https://auth.calendly.com/oauth/token; default scopes list is empty.",
+   "source_url": "https://backend.composio.dev/api/v3/toolkits/calendly",
+   "quote": "\"managed_oauth_available\": true, \"default_scopes\": []",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f10",
+   "claim": "The token exchange sends code_verifier; server apps also send the client secret via HTTP Basic auth.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "If your app runs on a server, also send your client secret. Use HTTP Basic authentication",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f11",
+   "claim": "Older docs said PKCE was not enforced for web apps, which conflicts with the current docs.",
+   "source_url": "https://developer.calendly.com/creating-an-oauth-app",
+   "quote": "While we will not enforce PKCE for web applications, we recommend using PKCE",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f12",
+   "claim": "Apps can be edited (name, redirect URI, environment, scopes) and deleted in Developer tools.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Change the app name, redirect URI, environment type, or scopes.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f13",
+   "claim": "Scopes come in read/write pairs, and a write scope includes the matching read scope.",
+   "source_url": "https://developer.calendly.com/docs/authentication/scopes",
+   "quote": "A :write scope implicitly includes the corresponding :read scope within the same domain.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f14",
+   "claim": "Some scopes are high-impact (organizations:write, data_compliance:write, activity_log:read), but none is labeled sensitive and no separate review is described.",
+   "source_url": "https://developer.calendly.com/docs/authentication/scopes",
+   "quote": "Invite or remove users from an organization.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f15",
+   "claim": "Calendly advises requesting the minimum scopes needed.",
+   "source_url": "https://developer.calendly.com/docs/authentication/scopes",
+   "quote": "it should request the minimum set of scopes needed for your use cases.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f16",
+   "claim": "New OAuth apps get no API access until scopes are explicitly requested and approved.",
+   "source_url": "https://developer.calendly.com/docs/authentication/scopes",
+   "quote": "For newly created OAuth apps and new Personal Access Tokens, no API access is granted until scopes are explicitly requested and approved.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f17",
+   "claim": "Calendly has no separate flow for updating scopes, so existing users must re-run OAuth.",
+   "source_url": "https://community.calendly.com/api-webhook-help-61/forcing-calendy-oauth-consent-4589",
+   "quote": "Calendly's OAuth scope requirements also indicate there is no separate \"update scopes\" flow",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f18",
+   "claim": "API requests work on any plan, but webhook subscriptions require a paid Standard, Teams or Enterprise plan.",
+   "source_url": "https://developer.calendly.com/docs/getting-started/frequently-asked-questions",
+   "quote": "As for webhooks, the Calendly user account for which the webhook subscription is being made will need a paid subscription",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f19",
+   "claim": "Listing activity log entries and deleting invitee or scheduled event data are Enterprise-only endpoints.",
+   "source_url": "https://developer.calendly.com/docs/getting-started/frequently-asked-questions",
+   "quote": "The Enterprise-specific endpoints are:",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f2",
+   "claim": "App creation lives in Calendly's Developer tools under the OAuth apps tab, after logging in with a Calendly account.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Log in to Calendly, or sign up for a Calendly account.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f20",
+   "claim": "Refresh tokens are single-use with rotation, with an enforcement deadline of August 31, 2026.",
+   "source_url": "https://developer.calendly.com/docs/authentication/refresh-token-rotation-guide",
+   "quote": "The enforcement deadline is August 31, 2026.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f21",
+   "claim": "Reusing a rotated refresh token returns invalid_grant with HTTP 400 or 401.",
+   "source_url": "https://developer.calendly.com/docs/authentication/refresh-token-rotation-guide",
+   "quote": "the Calendly API will respond with HTTP 400 or 401 and the JSON error invalid_grant.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f23",
+   "claim": "Access token lifetime isn't stated, and rotation doesn't change access token behavior.",
+   "source_url": "https://developer.calendly.com/docs/authentication/refresh-token-rotation-guide",
+   "quote": "Access token behavior (lifetime, scopes, etc.) does not change.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f24",
+   "claim": "OAuth apps access data on behalf of other Calendly users, and the OAuth app page describes no review or listing step.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Create an OAuth app to access Calendly data on behalf of other Calendly users.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f25",
+   "claim": "No install cap or user cap for unreviewed apps is documented on the OAuth app page or in the changelog.",
+   "source_url": "https://developer.calendly.com/release-notes",
+   "quote": "Authorization scopes for API access",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f3",
+   "claim": "If the Developer menu is missing, the account is still being migrated; manage OAuth apps at developer.calendly.com meanwhile.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Your account is still being moved. Until then, manage OAuth apps at developer.calendly.com.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f30",
+   "claim": "A third-party guide says any Calendly account can create OAuth apps.",
+   "source_url": "https://docs.scalekit.com/agentkit/connectors/calendly/",
+   "quote": "Any Calendly account can create OAuth apps.",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f31",
+   "claim": "A third-party report claims partner approvals can be slow; this isn't in Calendly's docs.",
+   "source_url": "https://supergood.ai/api-report-card/calendly",
+   "quote": "partner approvals can be slow",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f34",
+   "claim": "Calendly's OIDC discovery document advertises the PKCE S256 method.",
+   "source_url": "https://calendly.com/.well-known/openid-configuration",
+   "quote": "code_challenge_methods_supported: [S256]",
+   "status": "probed",
+   "flags": []
+  },
+  {
+   "id": "f35",
+   "claim": "OAuth is required to connect multiple accounts; personal access tokens cover a single account.",
+   "source_url": "https://developer.calendly.com/docs/authentication/overview",
+   "quote": "OAuth is required for multiple accounts, while personal access tokens are used for installing in a single account at a time.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f4",
+   "claim": "Older docs described a separate developer account created via GitHub or Google.",
+   "source_url": "https://developer.calendly.com/creating-an-oauth-app",
+   "quote": "Sign up for a Calendly developer account using your Github or Google account",
+   "status": "community",
+   "flags": []
+  },
+  {
+   "id": "f5",
+   "claim": "The create-app form asks for an app name, exactly one redirect URI, an environment type (Sandbox or Production) and at least one scope.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "App name: use letters, numbers, hyphens, and spaces only. Enter exactly one URI.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f6",
+   "claim": "Sandbox accepts https URIs or http on localhost; Production accepts https only.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Sandbox: https URIs, and http URIs on localhost. Production: https URIs only",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f7",
+   "claim": "Calendly recommends starting with a Sandbox app and creating a separate Production app for real customer data.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "We recommend that you start with a Sandbox app for development.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f8",
+   "claim": "The client secret and webhook signing key are shown only once, and Developer tools currently can't show the client ID again.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "You cannot view the client secret or the webhook signing key again. At this time, you also cannot view the client ID again in Developer tools.",
+   "status": "official_doc",
+   "flags": []
+  },
+  {
+   "id": "f9",
+   "claim": "PKCE with S256 is mandatory for every OAuth app.",
+   "source_url": "https://developer.calendly.com/docs/authentication/creating-an-oauth-app",
+   "quote": "Every OAuth app must use Proof Key for Code Exchange (PKCE) with the S256 method.",
+   "status": "official_doc",
+   "flags": []
+  }
+ ],
+ "open_questions": [
+  "The Developer tools UI couldn't be opened without logging in, so the exact form fields and any approval step shown there haven't been checked.",
+  "Calendly's developer policy page couldn't be fetched, so its rules on distribution, data use or review haven't been checked.",
+  "Access token lifetime (expires_in) isn't documented.",
+  "It's not documented whether Sandbox apps have user or rate limits that Production apps don't.",
+  "Calendly's own rate limits weren't checked; third-party write-ups say 60 requests/min on Free, Standard and Teams and 120 on Enterprise.",
+  "A third-party source mentions slow 'partner approvals'. It's unclear whether Calendly runs any partner or listing program separate from plain OAuth apps.",
+  "Composio lists two different callback paths (v1 auth-apps/add and v3 toolkits/auth/callback). Check which one your dashboard shows.",
+  "Refresh-token rotation enforcement hasn't been tested against a live app."
+ ],
+ "slug": "calendly",
+ "provenance": {
+  "kind": "agent",
+  "generated_at": "2026-10-29T02:48:17+00:00",
+  "model": "claude-haiku-5-5 -> claude-opus-5-5",
+  "research_model": "claude-haiku-5-5",
+  "synthesis_model": "claude-opus-5-5",
+  "escalated": false,
+  "escalation_reason": null,
+  "verified_on": null,
+  "verification_notes": [],
+  "sources_consulted": 55,
+  "probes_run": 4,
+  "research_seconds": 166,
+  "est_cost_usd": 0.31,
+  "cost_breakdown": {
+   "claude-haiku-5-5": 0.0873,
+   "claude-opus-5-5": 0.2227
+  },
+  "usage": {
+   "claude-haiku-5-5": {
+    "in": 20,
+    "out": 23186,
+    "cache_read": 522325,
+    "cache_write": 104382,
+    "search": 6
+   },
+   "claude-opus-5-5": {
+    "in": 4,
+    "out": 8189,
+    "cache_read": 0,
+    "cache_write": 11783,
+    "search": 0
+   }
+  },
+  "served_models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ]
+ }
+}
