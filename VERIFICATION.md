@@ -106,6 +106,18 @@ Seven guides were generated on the live site for apps confirmed **absent from Co
 
 **One limitation this exposed.** "Retrieved" means the URL appeared in this run's search results or fetches, and search results carry page content. A page can be in a search index after it has gone offline. Procore's GitHub Pages site is an example: a reader who clicks the source gets a 404. Re-probing every cited URL at validation time would catch this, though a JavaScript-rendered site that returns 200 for any path would still slip through.
 
+## Spot-check: the three hardest apps (Etsy, Toast, Amazon SP-API; 2026-10-30)
+
+| App | Verdict | Checked against the provider | Result |
+|---|---|---|---|
+| Etsy | heavy review | Seller Apps "approved within minutes, with no manual review queue"; "You must have an approved Personal App before you can request Commercial Access" (developer docs) | Confirmed word for word. The API Terms quotes (`etsy.com/legal/api`) could not be re-checked: the page returns 403 to scripted requests. The "about 5 shops" and "5 req/sec" limits come only from a third-party guide, and the guide labels them so |
+| Toast | heavy review | Before development, a partner needs "Approval from the Toast compliance, privacy, security, and legal teams. A signed partner agreement"; beta uses "three to five locations"; Standard API access excludes "Write access"; 20 req/s and 10,000 per 15 min | All confirmed word for word. The guide also correctly says Toast has **no user-consent OAuth flow** (it uses client credentials) |
+| Amazon SP-API | heavy review | Authorization-limit table: private 10 self-auth with no OAuth; public unlisted "Seller: 25 Vendor: Unlimited"; "you can't add additional authorizations"; listing published "in three to four weeks"; Phase 1 business-verification review | All confirmed. Amazon has moved its docs from `developer-docs.amazon.com` to `developer-docs.amazon`, which the old URLs redirect to, so the guide's `.amazon` citations are real |
+
+**What went right.** All three are "heavy review", which matches what I predicted before generating. Each rests on a different mechanism: a partnership and legal review (Toast), a developer-profile and security review plus an install cap (Amazon), and staged manual access tiers (Etsy). None of the three is in Composio, and all three guides say so.
+
+**Rubric question this raised.** Etsy's Commercial Access is a manual review with no published timeline, and community reports describe weeks, or requests left pending. It is not a security assessment. The tier definitions mix *what kind of gate* with *how long it takes*. When the duration is unknown, the writer has to choose, and "heavy" here rests on community wait reports. See FINDINGS.md.
+
 ## Hand-test checklist (about 15 min per app, all free accounts)
 
 Record the date, what you saw, and a screenshot. Change the matching evidence to `"status": "tested"` in `guides/<app>.json`, or correct the claim and add a line to the section above.

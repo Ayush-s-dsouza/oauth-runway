@@ -99,6 +99,7 @@ See **[VERIFICATION.md](VERIFICATION.md)**. In short:
 - Eight assumptions were corrected or sharpened along the way. For example: Slack's real blocker for agents is the rate limit on apps outside its Marketplace, not review. Notion reviews listings, not OAuth use. HubSpot's real gate is a 25-install cap.
 - Two things are unresolved: the Composio redirect URI inconsistency (v1 vs. v3) and whether Google accepts Composio's callback domain during verification.
 - **Console steps are not hand-tested yet.** The pages say so, and VERIFICATION.md has the checklist.
+- **Live spot-checks (2026-10-30):** 12 guides generated on the deployed site, 10 of them for apps Composio doesn't cover. About 30 key claims were checked against provider pages, and 0 were wrong. Three harness flaws were found and fixed. The summary and the prioritised backlog are in **[FINDINGS.md](FINDINGS.md)**.
 
 ## Run it locally
 
