@@ -8,7 +8,7 @@ import time
 from . import store
 from .agent import RESEARCH_MODEL, SYNTHESIS_MODEL, Emit, Research
 from .schema import Guide, Provenance, slugify
-from .validate import evidence_stats, validate
+from .validate import evidence_stats, lock_composio, validate
 
 
 async def generate_guide(query: str, emit: Emit, slug: str | None = None) -> Guide:
@@ -19,6 +19,7 @@ async def generate_guide(query: str, emit: Emit, slug: str | None = None) -> Gui
 
     await emit({"type": "validating", "text": "checking every citation against what was actually retrieved"})
     draft, notes = validate(draft, research.seen_urls, research.probed_hosts)
+    notes += lock_composio(draft, research.composio_lookups)
     if research.lock_stats and any(research.lock_stats.values()):
         notes.append(f"evidence lock: dropped {research.lock_stats['invented']} evidence ids the writer invented, "
                      f"restored {research.lock_stats['altered_quotes']} quotes it altered")

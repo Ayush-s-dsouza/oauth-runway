@@ -158,3 +158,26 @@ def evidence_stats(draft: GuideDraft) -> dict[str, int]:
     for e in draft.evidence:
         out[e.status] = out.get(e.status, 0) + 1
     return out
+
+
+def lock_composio(draft: GuideDraft, lookups: list[dict]) -> list[str]:
+    """Overwrite the guide's Composio facts (slug, managed flag, default scopes)
+    with what the composio_toolkit lookup actually returned. The writer keeps
+    the prose note; it can't claim a toolkit or scopes the catalog didn't give.
+    No lookup, or no key on the server, means unknown (None), not False."""
+    c = draft.composio
+    before = (c.toolkit_slug, c.managed_oauth_available, list(c.default_scopes))
+    found = next((r for r in reversed(lookups) if r.get("available")), None)
+    if found:
+        scopes = next((a["default_scopes"] for a in found.get("auth_configs") or [] if a.get("default_scopes")), [])
+        c.toolkit_slug, c.managed_oauth_available, c.default_scopes = (
+            found.get("toolkit_slug"), bool(found.get("managed_oauth_available")), scopes)
+    elif any("No Composio toolkit found" in (r.get("reason") or "") for r in lookups):
+        c.toolkit_slug, c.managed_oauth_available, c.default_scopes = None, False, []
+    else:  # never looked up, or lookup unavailable: the writer can't know either
+        c.toolkit_slug, c.managed_oauth_available, c.default_scopes = None, None, []
+    after = (c.toolkit_slug, c.managed_oauth_available, list(c.default_scopes))
+    if after != before:
+        return [f"Composio facts reset to the catalog lookup (writer had slug={before[0]!r}, "
+                f"managed={before[1]}, {len(before[2])} scopes)"]
+    return []

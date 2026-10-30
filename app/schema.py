@@ -74,7 +74,11 @@ class Verdict(BaseModel):
         description=(
             "instant = create app and go public with no review; self_serve = some account/config "
             "prerequisites but no human review for public use; light_review = a review/listing step "
-            "typically days; heavy_review = verification/security assessment typically weeks+."
+            "typically days; heavy_review = verification/security assessment typically weeks+. "
+            "Rate the lightest path that lets customers beyond you connect without a cap that blocks "
+            "real use. An optional marketplace listing that OAuth use doesn't need does not raise the "
+            "tier (mention it in approval_wait); a listing or review needed to lift a hard install/user "
+            "cap does."
         )
     )
     summary: str = Field(description="One or two plain sentences: what makes this easy or hard.")

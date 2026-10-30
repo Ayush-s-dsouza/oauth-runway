@@ -73,6 +73,39 @@ I generated a guide on the deployed site for [Teamleader Focus](https://oauth-ru
 
 **The fix and what testing it taught me.** I added the first-party upgrade rule described under Evidence levels. My first version simply matched the provider's domain. Run against the 17 bundled agent guides, it would have upgraded 32 sources, and most of them were **provider-hosted forums**: community.docusign.com, devcommunity.pipedrive.com, Microsoft Q&A, the ServiceNow community. Those are user posts, and "community" is the correct label for them. It would also have treated any `*.readme.io` site as Pipedrive's. The shipped rule excludes forum, Q&A and issue-tracker hosts and paths, and it identifies shared doc platforms by their full host. Across the same 18 guides it now upgrades 4 sources, all genuine first-party docs: Calendly's developer site, Xero's official sample app (`XeroAPI`) and Teamleader's docs repo. The rule applies to newly generated guides. The bundled samples are kept exactly as the eval produced them.
 
+## Spot-check: seven apps Composio doesn't cover (2026-10-30)
+
+Seven guides were generated on the live site for apps confirmed **absent from Composio's catalog**, both by slug lookup and by Composio's toolkit search. The verdict-driving claims were then checked against the providers' own pages, fetched directly; PDFs were text-extracted.
+
+**Mechanism signals.**
+- All seven runs used Haiku research and Opus writing, and none escalated.
+- Each guide cost $0.29–0.46 and took 148–325 s.
+- The validator downgraded only 1 citation across all seven, so research reads what it cites.
+- The new first-party upgrade fired twice in production (Planning Center, Fortnox).
+- All seven notes correctly say there is no Composio toolkit.
+
+| App | Verdict | Checked against the provider | Result |
+|---|---|---|---|
+| Planning Center | self-serve | Since 22 Mar 2023 only org admins can create OAuth apps; church admins control per-app access (API docs and changelog) | Confirmed word for word |
+| Netatmo | self-serve, with camera scopes reviewed | "access" camera scopes "only given on a per app basis after our teams have reviewed it" (dev guideline) | Confirmed |
+| Withings | self-serve | No polling more than once per 10 min (`llms.md`). The Withings+ requirement for new accounts from about 12 Oct 2026 is corroborated by several outlets but not checked in Withings' own developer docs, which the guide labels correctly. "Reviewed before access is enabled" rests on one old community post, hedged in the guide | Confirmed / labelled honestly. **The Composio box was wrong**: see below |
+| Oura | light review | 10-user cap until Oura approves; "submit it for review from the application's page" | Confirmed (the review quote fetched; the cap via the published v2 spec) |
+| Exact Online | light review | "Exact may, at its sole discretion, reject Your App" and "revoke any approval" (App Center terms, PDF) | Confirmed. The 5-working-day review and the EUR 15/month fee come only from Apideck; they are labelled community, and the guide says "reported by third parties, not by Exact". This is the weakest evidence base of the seven (33 of 48 citations are community) |
+| Procore | heavy review → see below | Admin-only installs since 20 Jan 2026 (release notes) | Confirmed. The Marketplace requirements cite `procore.github.io/documentation/…`, which **now returns 404** (the site is gone but still in search indexes). The beta-customer requirement is corroborated by Procore's 2025 partner-program FAQ |
+| Fortnox | self-serve | "You have to [be] a company registered according to Swedish law" (Developer Agreement §5.1, PDF); hidden integrations reachable by Client ID; developer licence added by Fortnox | Confirmed word for word. This is the most useful catch in the set: a non-Swedish builder can't sign the agreement themselves |
+
+**Two problems found and fixed.**
+1. **The Composio facts were not code-owned (Withings).**
+   - What went wrong: the lookup returned no toolkit, but the writer set `toolkit_slug: "withings"` and listed Withings' own scopes as Composio's defaults. The page rendered "toolkit `withings`". The prose note was correct; the structured fields were invented.
+   - Fix: `lock_composio()` now overwrites the slug, managed flag and default scopes with the lookup's actual result, and the writer keeps only the prose. With no key or no lookup, the fields read "unknown", never "no managed app".
+   - Side effect: the eval's `managed_match` metric becomes correct by construction for new runs, so it no longer measures the model.
+2. **The difficulty rubric was ambiguous (Procore vs Fortnox).**
+   - What went wrong: the two have the same structure. Any customer can connect a custom or hidden integration without review, and only an optional marketplace listing is reviewed. Yet Procore was rated heavy review and Fortnox self-serve.
+   - The curated guides already follow one rule. Notion is self-serve although its listing is reviewed. HubSpot is light review because its 25-install cap makes the listing necessary.
+   - Fix: that rule is now written into the verdict's schema description: rate the lightest uncapped path, and an optional listing doesn't raise the tier. This changes model input, so the eval has not been re-run on it.
+
+**One limitation this exposed.** "Retrieved" means the URL appeared in this run's search results or fetches, and search results carry page content. A page can be in a search index after it has gone offline. Procore's GitHub Pages site is an example: a reader who clicks the source gets a 404. Re-probing every cited URL at validation time would catch this, though a JavaScript-rendered site that returns 200 for any path would still slip through.
+
 ## Hand-test checklist (about 15 min per app, all free accounts)
 
 Record the date, what you saw, and a screenshot. Change the matching evidence to `"status": "tested"` in `guides/<app>.json`, or correct the claim and add a line to the section above.

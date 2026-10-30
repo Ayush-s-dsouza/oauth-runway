@@ -220,6 +220,7 @@ class Research:
         self.escalation_reason: str | None = None
         self.served: list[dict] = []  # [{phase, requested, served}] -- lets an eval assert no silent model substitution
         self.findings: ResearchFindings | None = None
+        self.composio_lookups: list[dict] = []  # raw composio_toolkit results; code, not the writer, owns guide.composio facts
         self.started = time.monotonic()
 
     def _usage_for(self, model: str) -> dict:
@@ -275,6 +276,7 @@ class Research:
         if name == "composio_toolkit":
             await self.emit({"type": "composio", "text": f"Composio catalog: {inp.get('name')}"})
             out = await probes.run_with_timeout(composio_toolkit(inp.get("name", self.query)))
+            self.composio_lookups.append(out)
             if out.get("available"):
                 await self.emit({"type": "composio", "text": f"managed OAuth: {'yes' if out['managed_oauth_available'] else 'no'} ({out['toolkit_slug']})"})
         elif name in ("probe_url", "probe_oauth_authorize", "probe_oidc_discovery"):

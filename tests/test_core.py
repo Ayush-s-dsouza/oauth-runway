@@ -79,6 +79,26 @@ def test_first_party_community_sources_are_upgraded_only_when_retrieved():
     assert any("upgraded" in n for n in notes)
 
 
+def test_composio_facts_come_from_the_lookup_not_the_writer():
+    from app.validate import lock_composio
+
+    # Withings, 2026-10-30: lookup found nothing, writer still filled in a slug and the provider's own scopes
+    d = draft(composio={"toolkit_slug": "withings", "managed_oauth_available": False,
+                        "default_scopes": ["user.info", "user.metrics"], "note": "n"})
+    notes = lock_composio(d, [{"available": False, "reason": "No Composio toolkit found for 'Withings' (tried [...])."}])
+    assert (d.composio.toolkit_slug, d.composio.managed_oauth_available, d.composio.default_scopes) == (None, False, [])
+    assert notes and d.composio.note == "n"  # the prose stays the writer's
+
+    d = draft(composio={"toolkit_slug": None, "managed_oauth_available": False, "note": "n"})
+    lock_composio(d, [{"available": True, "toolkit_slug": "acme", "managed_oauth_available": True,
+                       "auth_configs": [{"default_scopes": []}, {"default_scopes": ["read", "write"]}]}])
+    assert (d.composio.toolkit_slug, d.composio.managed_oauth_available, d.composio.default_scopes) == ("acme", True, ["read", "write"])
+
+    d = draft(composio={"toolkit_slug": "acme", "managed_oauth_available": True, "note": "n"})
+    lock_composio(d, [{"available": False, "reason": "COMPOSIO_API_KEY not configured on this server"}])
+    assert d.composio.managed_oauth_available is None  # no key: unknown, not "no managed app"
+
+
 def test_probed_without_probe_is_downgraded():
     d, _ = validate(draft(), seen_urls=set(), probed_hosts=set())
     assert {e.id: e for e in d.evidence}["e3"].status == "inferred"
