@@ -2,7 +2,7 @@
 
 **How long until your OAuth app is approved?** You can look up an app and get a guide you can share for registering your own OAuth app with that provider. Each guide covers where to start, what you do versus what an agent can do, how long it takes, and what can block approval. If an app isn't in the library, an agent researches it live and writes the guide.
 
-- **Live demo:** _<Render URL — pending deploy>_
+- **Live demo:** https://oauth-runway.onrender.com (Render free plan: the first visit after 15 idle minutes takes about a minute to wake)
 - Library: GitHub · Notion · Slack · HubSpot · Shopify · Gmail (Google). They span instant to heavy review.
 - Agent-generated library: 17 guides from the shipped configuration (Zoom, Salesforce, Outlook, Xero, DocuSign, Bexio, Clio, Calendly and more), labelled as not reviewed.
 - Every guide is available as HTML (`/g/<app>`), Markdown (`/g/<app>.md`) and JSON (`/g/<app>.json`).
