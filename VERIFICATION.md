@@ -14,7 +14,7 @@ Every claim in a guide carries one of these labels, and the guide page shows it 
 | **Community** | Forum, blog, Stack Overflow, third-party docs | Same rule as official docs |
 | **Inferred** | Reasoning without a retrieved source | Default for anything that can't show a source |
 
-The downgrade rules live in [app/validate.py](app/validate.py) and are tested in [tests/test_core.py](tests/test_core.py).
+The downgrade rules live in [app/validate.py](app/validate.py) and are tested in [tests/test_core.py](tests/test_core.py). There is one upgrade rule, and it only ever applies to a retrieved source. A "community" citation that is really first-party becomes "official docs". First-party means the provider's own domain, or a GitHub org named after the provider, such as `github.com/teamleadercrm`. Forums, Q&A pages and issue trackers stay "community" even on the provider's own domain. See the spot-check below.
 
 ## Curated library: what was checked (2026-10-28)
 
@@ -52,6 +52,26 @@ These are cases where the first draft of the answer, often from memory, was wron
 | Shopify | 404 "Store unavailable" for a made-up shop | The authorize URL is per-store; you need a real (dev) store to test |
 
 Two fixes came out of reading the probe output. The probe's login-wall detection flagged Google's error page as a login page, because its path contains "signin", so the heuristic was tightened. Google's `authError` is base64 protobuf, so the probe now decodes it into readable text for the agent.
+
+## Spot-check: a live guide for an unseen app (Teamleader, 2026-10-30)
+
+I generated a guide on the deployed site for [Teamleader Focus](https://oauth-runway.onrender.com/g/teamleader), an app outside the library and outside the eval set. It took about 2.5 minutes and cost $0.32. I then checked its claims by hand against Teamleader's own docs, Composio's live API and fresh probes.
+
+| Claim in the guide | Checked against | Result |
+|---|---|---|
+| You register an integration on the Marketplace and get a client_id and secret at once | Teamleader's API docs source ([`authentication.apib`](https://github.com/teamleadercrm/api/blob/master/src/authentication.apib)) | Confirmed, quoted word for word |
+| Redirect URIs are matched exactly against a whitelist; scopes must be selected at registration | same | Confirmed |
+| Access tokens last 3600 s; refresh tokens are single-use | same | Confirmed |
+| 200 requests per minute per account, sliding window, HTTP 429 | [`introduction.apib`](https://github.com/teamleadercrm/api/blob/master/src/introduction.apib) (`X-RateLimit-Limit: 200`) | Confirmed |
+| Marketplace listing needs a test-account user, an mp4 demo, accepted terms, and descriptions in two languages; Teamleader then contacts you to test it | [Teamleader support article](https://support.focus.teamleader.eu/hc/en-150/articles/25692187820561-Getting-started-How-do-I-publish-my-integration-on-the-Teamleader-Focus-Marketplace) | Confirmed |
+| Composio: no managed app, 13 default scopes, authorize and token URLs on `focus.teamleader.eu`, default redirect `/api/v1/auth-apps/add` | Composio toolkit API, queried independently | Exact match |
+| "Authorize host may be `focus.` or `app.teamleader.eu`" (open question in the guide) | Probe of both hosts | **Resolved.** `app.teamleader.eu` returns 302 to `focus.teamleader.eu`, so either works. A bogus client_id lands on the login page rather than an error, as the guide's blocker says |
+| "Integrations can't be deleted"; "http redirect URIs only for local dev"; "free developer account" | Third-party SDK wiki and Apideck only | Labelled community in the guide; not confirmed by Teamleader |
+| No review is needed before other accounts can connect an unlisted integration | Teamleader's docs mention no such review | Consistent with the docs, but this is an absence of evidence. The guide says "none found", which is the right wording. Not verifiable without logging in |
+
+**Nothing checked was wrong.** The check found one labelling flaw. Teamleader's own docs repo (`github.com/teamleadercrm/api`) was labelled "community" because it lives on GitHub. That **under-claims**, which is the safe direction, but it understates official facts.
+
+**The fix and what testing it taught me.** I added the first-party upgrade rule described under Evidence levels. My first version simply matched the provider's domain. Run against the 17 bundled agent guides, it would have upgraded 32 sources, and most of them were **provider-hosted forums**: community.docusign.com, devcommunity.pipedrive.com, Microsoft Q&A, the ServiceNow community. Those are user posts, and "community" is the correct label for them. It would also have treated any `*.readme.io` site as Pipedrive's. The shipped rule excludes forum, Q&A and issue-tracker hosts and paths, and it identifies shared doc platforms by their full host. Across the same 18 guides it now upgrades 4 sources, all genuine first-party docs: Calendly's developer site, Xero's official sample app (`XeroAPI`) and Teamleader's docs repo. The rule applies to newly generated guides. The bundled samples are kept exactly as the eval produced them.
 
 ## Hand-test checklist (about 15 min per app, all free accounts)
 

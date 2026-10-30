@@ -47,6 +47,38 @@ def test_validator_downgrades_unretrieved_and_fake_statuses():
     assert any("gate 3" in n for n in notes)  # review verdict with no retrieved gate-3 source
 
 
+def test_first_party_community_sources_are_upgraded_only_when_retrieved():
+    from app.validate import is_first_party
+
+    doms = {"teamleader.eu"}
+    assert is_first_party("https://github.com/teamleadercrm/api/blob/master/src/authentication.apib", doms)
+    assert is_first_party("https://support.focus.teamleader.eu/hc/en-150/articles/1", doms)
+    assert not is_first_party("https://github.com/MCore-Services-bv/teamleader-sdk", doms)  # third-party SDK
+    assert not is_first_party("https://developers.apideck.com/apis/crm/teamleader", doms)
+    assert not is_first_party("https://github.com/x", {"x.io"})  # short brands never match an org
+    # provider-hosted forums are still user posts
+    assert not is_first_party("https://community.docusign.com/go-live-70/thread-1", {"docusign.com"})
+    assert not is_first_party("https://devcommunity.pipedrive.com/t/app-review/7555", {"pipedrive.com"})
+    assert not is_first_party("https://learn.microsoft.com/en-us/answers/questions/1/x", {"microsoft.com"})
+    assert not is_first_party("https://www.servicenow.com/community/developer-forum/x", {"servicenow.com"})
+    assert not is_first_party("https://github.com/teamleadercrm/api/issues/12", doms)
+    # shared doc hosts are identified by full host, never by domain
+    assert is_first_party("https://pipedrive.readme.io/docs/oauth", {"pipedrive.readme.io"})
+    assert not is_first_party("https://othervendor.readme.io/docs", {"pipedrive.readme.io"})
+    assert is_first_party("https://github.com/pipedrive/client-nodejs", {"pipedrive.readme.io"})
+
+    urls = {"own": "https://github.com/acmeinc/docs/auth.md", "sdk": "https://github.com/someone/acme-sdk",
+            "unseen": "https://github.com/acmeinc/other"}
+    d = draft(evidence=[{"id": k, "claim": k, "source_url": u, "status": "community"} for k, u in urls.items()],
+              steps=[], gates=[])
+    d, notes = validate(d, seen_urls={urls["own"], urls["sdk"]}, probed_hosts=set())
+    ev = {e.id: e for e in d.evidence}
+    assert ev["own"].status == "official_doc" and not ev["own"].flags
+    assert ev["sdk"].status == "community"
+    assert ev["unseen"].status == "inferred"  # never upgrade something that wasn't retrieved
+    assert any("upgraded" in n for n in notes)
+
+
 def test_probed_without_probe_is_downgraded():
     d, _ = validate(draft(), seen_urls=set(), probed_hosts=set())
     assert {e.id: e for e in d.evidence}["e3"].status == "inferred"

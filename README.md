@@ -107,7 +107,7 @@ python -m venv .venv && .venv/Scripts/activate      # macOS/Linux: source .venv/
 pip install -r requirements-dev.txt
 cp .env.example .env                                # add ANTHROPIC_API_KEY (and optionally COMPOSIO_API_KEY)
 uvicorn app.main:app --reload                       # http://localhost:8000
-pytest                                              # 20 tests: validator, SSRF guard, two-phase agent + escalation, web flow, eval wiring
+pytest                                              # 31 tests: validator, SSRF guard, two-phase agent + escalation, web flow, eval wiring
 python -m scripts.generate "Calendly"               # CLI generation with progress
 ```
 
