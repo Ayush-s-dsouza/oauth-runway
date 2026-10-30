@@ -130,14 +130,16 @@ Record the date, what you saw, and a screenshot. Change the matching evidence to
 - [ ] **HubSpot:** create a project app (`hs project create`), set redirectUrls, upload, and install into a developer test account.
 - [ ] **Shopify:** Partner account, then a development store, then a custom-distribution app. Confirm the "can't change distribution later" warning.
 
-## Agent vs. curated (to run once an API key is configured)
+## Agent vs. curated
+
+The eval below does this systematically. Each curated app is a reference case, and agent guides are graded against its key facts and difficulty verdict. To diff a single app by hand:
 
 ```bash
 python -m scripts.generate "Slack" --slug slack-agent
 python -m scripts.compare slack slack-agent
 ```
 
-`scripts/compare.py` lines up the verdict, gate review flags, scope tiers and evidence mix, and lists the agent's unsourced steps. Run it for all six apps and record the disagreements here.
+`scripts/compare.py` lines up the verdict, gate review flags, scope tiers and evidence mix, and lists the agent's unsourced steps.
 
 ## Eval results: routing and harness steering (2026-10-28/29)
 

@@ -108,7 +108,7 @@ python -m venv .venv && .venv/Scripts/activate      # macOS/Linux: source .venv/
 pip install -r requirements-dev.txt
 cp .env.example .env                                # add ANTHROPIC_API_KEY (and optionally COMPOSIO_API_KEY)
 uvicorn app.main:app --reload                       # http://localhost:8000
-pytest                                              # 31 tests: validator, SSRF guard, two-phase agent + escalation, web flow, eval wiring
+pytest                                              # 32 tests: validator, SSRF guard, two-phase agent + escalation, web flow, eval wiring
 python -m scripts.generate "Calendly"               # CLI generation with progress
 ```
 
@@ -141,7 +141,7 @@ The Dockerfile serves on `$PORT`, and the health check is `/api/status`.
 - Probes can't see validation behaviour on JavaScript-rendered consent pages (Slack, HubSpot, Notion); for those they only confirm the endpoint is reachable.
 - The URL check verifies that the agent *retrieved* a source, not that the source says what the agent claims. Quotes are shown so a reader can judge, but they are not checked automatically.
 - The SSRF guard resolves DNS before connecting, but doesn't pin the resolved IP (DNS-rebinding window). That is acceptable for a demo, not for production.
-- Job state lives in memory, so a server restart drops in-flight generations; finished guides persist on the volume.
+- Job state lives in memory, so a server restart drops in-flight generations. On Render's free plan the disk is also ephemeral, so live-generated guides last until the next sleep or redeploy. The curated and bundled agent guides ship in the image and are unaffected.
 
 ## Repository layout
 
@@ -154,5 +154,11 @@ app/validate.py        post-generation evidence checks
 app/schema.py          Guide model (drives tool schema, validation, rendering)
 app/main.py            FastAPI: library, guide pages, SSE generation
 guides/*.json          curated, source-checked guides
+guides/agent/*.json    bundled agent-generated guides (shipped configuration, labelled unreviewed)
+evals/                 eval cases, runner, grader, LLM judge, comparison and diagnosis
 scripts/generate.py    CLI generation · scripts/compare.py  agent-vs-curated diff
+render.yaml            Render Blueprint (free plan, keys entered as secrets)
+DECISIONS.md           dated product and engineering decisions with their tradeoffs
+VERIFICATION.md        what was checked against sources, what changed, what is still uncertain
+FINDINGS.md            live spot-checks on the deployed site and where to take it next
 ```

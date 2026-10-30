@@ -1,6 +1,6 @@
 # Findings from live use (source of truth)
 
-This file covers what twelve live guides on the deployed site taught us, what was fixed, and what to do next, in priority order. The per-claim evidence is in [VERIFICATION.md](VERIFICATION.md). This file is the summary and the backlog. Last updated: 2026-10-30.
+This file covers what twelve live guides on the deployed site taught us, what was fixed, and where the product would go next, beyond the scope of this take-home. The per-claim evidence is in [VERIFICATION.md](VERIFICATION.md). Last updated: 2026-10-30.
 
 ## 1. What was tested
 
@@ -44,7 +44,7 @@ This file covers what twelve live guides on the deployed site taught us, what wa
 | 3.2 | The writer invented Composio fields (a slug and scopes) after a "not found" lookup | Withings | `lock_composio()`: code copies slug, managed flag and default scopes from the lookup; the writer keeps only the prose | Unit-tested. Note: `managed_match` is now correct by construction, so it no longer measures the model |
 | 3.3 | The same structure got different tiers (Procore heavy vs Fortnox self-serve) | Procore, Fortnox | The rubric now says an optional listing doesn't raise the tier, and a listing that lifts a hard cap does. This matches the curated guides (Notion, HubSpot) | **No.** The 6-app reference slice needs a re-run (about $7) |
 
-### Open, in priority order
+### Future work (beyond the take-home), most valuable first
 
 **P1. Turn these spot-checks into eval cases.**
 - *What:* the ten non-Composio apps now have hand-verified facts: Fortnox's Swedish entity, Oura's 10 users, Amazon's 25 sellers, Toast's partner-only path and so on. Add them to `evals/cases.json` as reference cases with 2–3 key facts each and an expected tier.

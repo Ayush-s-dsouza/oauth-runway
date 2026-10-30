@@ -252,3 +252,23 @@ Against v6 (full lock), the quote-only lock improved quote support on every app 
 - The disk is wiped on sleep, so live-generated guides are lost.
 
 The second is handled by bundling 17 agent-generated guides (16 from the v7 eval plus the live Calendly run) in `guides/agent/`. They're labelled as agent-generated and not reviewed, so the deployed library always shows real agent output.
+
+---
+
+## 2026-10-30 — After live spot-checks: code owns Composio facts; an optional listing doesn't raise the difficulty tier
+
+**Context:** 12 guides were generated on the deployed site, 10 of them for apps Composio doesn't cover. About 30 key claims were checked by hand and none were wrong (see FINDINGS.md).
+
+**Decision 1: Composio facts are code-owned.**
+- What happened: on Withings, the lookup returned "not found", but the writer filled in a toolkit slug and scopes anyway.
+- Decision: the slug, managed flag and default scopes now come straight from the lookup result. The writer only writes the prose.
+- This follows the same principle as the evidence lock: a fact with a deterministic source should never pass through a model.
+
+**Decision 2: rate difficulty by the lightest uncapped path.**
+- What happened: Procore and Fortnox have the same structure (customers connect without review; only an optional marketplace listing is reviewed), yet they got different tiers.
+- Decision: the rubric now states the convention the curated guides already used. Notion is self-serve although its listing is reviewed. HubSpot is light review because a 25-install cap makes the listing necessary.
+
+**Tradeoff accepted:** decision 2 changes model input and was not re-evaluated, because a re-run costs about $7 and the change matches the existing answer key's convention. It is disclosed in VERIFICATION.md. A live run after the change (FreshBooks) applied it as intended: optional AppStore listing, self-serve.
+
+**Not done, deliberately:** splitting difficulty into gate type plus wait time (see FINDINGS.md). It is the right long-term shape, but it needs a schema, template and grader change and a re-eval, which is beyond this take-home.
+
